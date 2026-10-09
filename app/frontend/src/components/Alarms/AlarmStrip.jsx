@@ -3,7 +3,7 @@ import { Box, Typography, Button, Tooltip } from '@mui/material';
 import { Bell, Volume2, VolumeX, Check, CheckCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api';
-import { getLatestAlarms, isLiveRigPayload, socket } from '../../socket';
+import { getLatestAlarms, getLatestRigData, isLiveRigPayload, socket } from '../../socket';
 import { useAuth } from '../../context/AuthContext';
 import { priorityColor, priorityRank } from '../../utils/alarms';
 import { formatDuration, secondsSince } from '../../utils/format';
@@ -26,6 +26,9 @@ import useAnnunciator from './useAnnunciator';
 //   toggle arms it on the user's gesture (autoplay-safe) and it sounds while
 //   any unacked alarm exists.
 // - Clicking the strip body navigates to /alarms.
+// - When the rig feed is not live, the last known alarms stay visible and are
+//   marked FEED STALE (they are never cleared just because data stopped), and the
+//   idle state reads "alarm state unknown" instead of a green all-clear.
 
 const isUnackState = (s) => s === 'UNACK' || s === 'RTN_UNACK';
 
@@ -36,6 +39,10 @@ export default function AlarmStrip() {
 
     const [active, setActive] = useState([]);
     const [counts, setCounts] = useState({ active: 0, unack: 0, p1: 0, p2: 0, p3: 0, highest: null });
+    const [feedLive, setFeedLive] = useState(() => {
+        const latest = getLatestRigData();
+        return latest ? isLiveRigPayload(latest) : true;
+    });
     // Re-render every second so "time-since-raised" counts up live.
     const [, setTick] = useState(0);
 
@@ -48,35 +55,25 @@ export default function AlarmStrip() {
     useEffect(() => {
         let mounted = true;
         applyAlarms(getLatestAlarms());
-        // Seed from REST only if PLC feed is live; stale PLC shows no alarms.
+        // Always seed the server's alarm list; feed liveness only changes how it is shown.
         axios.get('/api/rig/latest', { timeout: 3000 })
-            .then(({ data }) => {
-                if (!mounted) return;
-                if (!isLiveRigPayload(data)) {
-                    setActive([]);
-                    setCounts({ active: 0, unack: 0, p1: 0, p2: 0, p3: 0, highest: null });
-                    return;
-                }
-                return axios.get('/api/alarms', { timeout: 3000 }).then((res) => { if (mounted) applyAlarms(res.data); });
-            })
+            .then(({ data }) => { if (mounted) setFeedLive(isLiveRigPayload(data)); })
+            .catch(() => { if (mounted) setFeedLive(false); });
+        axios.get('/api/alarms', { timeout: 3000 })
+            .then((res) => { if (mounted) applyAlarms(res.data); })
             .catch((err) => console.error('Failed to seed alarms:', err));
 
         const handleAlarms = (payload) => applyAlarms(payload);
-        const clearIfNoPlc = (payload) => {
-            if (!isLiveRigPayload(payload)) {
-                setActive([]);
-                setCounts({ active: 0, unack: 0, p1: 0, p2: 0, p3: 0, highest: null });
-            }
-        };
+        const trackFeed = (payload) => setFeedLive(isLiveRigPayload(payload));
         socket.on('alarms', handleAlarms);
-        socket.on('rig_data', clearIfNoPlc);
+        socket.on('rig_data', trackFeed);
 
         const id = setInterval(() => setTick((t) => t + 1), 1000);
 
         return () => {
             mounted = false;
             socket.off('alarms', handleAlarms);
-            socket.off('rig_data', clearIfNoPlc);
+            socket.off('rig_data', trackFeed);
             clearInterval(id);
         };
     }, []);
@@ -151,7 +148,8 @@ export default function AlarmStrip() {
 
     const hasActive = active.length > 0;
 
-    // Calm "all clear" state — green dot, muted text, no motion.
+    // Calm "all clear" state — green dot, muted text, no motion. Without a live
+    // feed there is no basis for "all clear", so say the state is unknown.
     if (!hasActive) {
         return (
             <Box
@@ -162,9 +160,9 @@ export default function AlarmStrip() {
                     borderBottom: '1px solid', borderColor: 'divider',
                 }}
             >
-                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#22c55e', flex: '0 0 auto' }} />
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                    No active alarms
+                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: feedLive ? '#22c55e' : '#fbbf24', flex: '0 0 auto' }} />
+                <Typography variant="body2" sx={{ color: feedLive ? 'text.secondary' : '#fbbf24', fontWeight: 600 }}>
+                    {feedLive ? 'No active alarms' : 'No live data — alarm state unknown'}
                 </Typography>
                 {/* Speaker toggle stays available so the annunciator can be armed ahead of time. */}
                 <Box sx={{ flexGrow: 1 }} />
@@ -243,6 +241,17 @@ export default function AlarmStrip() {
                     · {elapsed}
                 </Typography>
             </Box>
+
+            {!feedLive && (
+                <Tooltip title="The rig feed is not live. These are the last known alarms; current conditions are unknown.">
+                    <Box sx={{
+                        px: 0.75, py: 0.1, borderRadius: 0.5, flex: '0 0 auto',
+                        border: '1px solid #fbbf24', color: '#fbbf24', fontWeight: 'bold', fontSize: 11, lineHeight: 1.7,
+                    }}>
+                        FEED STALE
+                    </Box>
+                </Tooltip>
+            )}
 
             {/* Counts by priority + unack total (text + color cue). */}
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1, flex: '0 0 auto' }}>

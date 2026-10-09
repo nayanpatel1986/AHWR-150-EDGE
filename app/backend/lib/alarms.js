@@ -25,6 +25,29 @@ const DEFAULT_CONFIG = [
     { key: 'eng_coolant_hi', dataKey: 'cat_engine.coolant_temp', label: 'Engine Coolant Temp High', unit: '°C', hi: 100, hiHi: 110, deadband: 1, onDelaySec: 5, priority: 'P2', enabled: true },
 ];
 
+const LIMIT_KEYS = ['hi', 'hiHi', 'lo', 'loLo'];
+
+// Validate one alarm definition. Returns an error string, or null when valid.
+// A malformed entry used to throw inside evaluate() on every poll cycle.
+function alarmEntryError(c, index) {
+    const at = `alarm[${index}]`;
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return `${at} must be an object`;
+    if (typeof c.key !== 'string' || !c.key.trim()) return `${at}.key is required`;
+    if (typeof c.dataKey !== 'string' || !/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/.test(c.dataKey)) {
+        return `${at}.dataKey must be a dotted path like drawworks.hook_load`;
+    }
+    if (!(c.priority in PRIORITY_RANK)) return `${at}.priority must be P1, P2 or P3`;
+    for (const k of LIMIT_KEYS) {
+        if (c[k] != null && !Number.isFinite(c[k])) return `${at}.${k} must be a number or null`;
+    }
+    if (!LIMIT_KEYS.some((k) => c[k] != null)) return `${at} needs at least one of hi, hiHi, lo, loLo`;
+    for (const k of ['deadband', 'onDelaySec']) {
+        if (c[k] != null && (!Number.isFinite(c[k]) || c[k] < 0)) return `${at}.${k} must be a non-negative number`;
+    }
+    if (typeof c.enabled !== 'boolean') return `${at}.enabled must be true or false`;
+    return null;
+}
+
 let config = null;
 const active = new Map();   // key -> alarm record
 const pending = new Map();  // key -> { since, condition, value, limit } awaiting on-delay
@@ -42,6 +65,12 @@ function load() {
         const added = DEFAULT_CONFIG.filter((c) => !have.has(c.key));
         if (added.length) { config = [...added, ...config]; writeJson(CONFIG_FILE, config).catch(() => {}); }
     }
+    // Never let a hand-edited/corrupt entry on disk break evaluation; skip it loudly.
+    config = config.filter((c, i) => {
+        const err = alarmEntryError(c, i);
+        if (err) console.error(`Ignoring invalid alarm definition: ${err}`);
+        return !err;
+    });
     events = readJson(EVENTS_FILE, []);
     if (!Array.isArray(events)) events = [];
 }
@@ -150,6 +179,13 @@ const getHistory = (limit = 200) => events.slice(-limit).reverse();
 const getConfig = () => config;
 async function setConfig(next) {
     if (!Array.isArray(next)) throw Object.assign(new Error('config must be an array'), { status: 400 });
+    const seen = new Set();
+    next.forEach((c, i) => {
+        const err = alarmEntryError(c, i);
+        if (err) throw Object.assign(new Error(err), { status: 400 });
+        if (seen.has(c.key)) throw Object.assign(new Error(`duplicate alarm key: ${c.key}`), { status: 400 });
+        seen.add(c.key);
+    });
     config = next;
     await writeJson(CONFIG_FILE, config);
     return config;

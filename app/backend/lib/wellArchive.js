@@ -20,6 +20,7 @@
 // shape of the data (peaks included), not just a sampled point.
 const { InfluxDB, Point } = require('@influxdata/influxdb-client');
 const { readJson, writeJson } = require('./persist');
+const { isFluxInstant } = require('./validate');
 
 const INFLUX_URL = process.env.INFLUX_URL || 'http://influxdb:8086';
 const INFLUX_TOKEN = process.env.INFLUX_TOKEN;
@@ -253,9 +254,22 @@ async function getWellConsumption(startIso, endIso) {
 // back into this app (round-trip safe).
 // ---------------------------------------------------------------------------
 const MAX_EXPORT_ROWS = Number(process.env.EXPORT_MAX_ROWS || 500000);
+const EVERY_RE = /^\d{1,6}(s|m|h|d)$/;
+
+// start/stop/every are interpolated into Flux, so only accept RFC3339 instants,
+// relative durations, now() (stop only) and a plain window duration.
+function assertQueryWindow({ start, stop, every }) {
+    const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+    if (!isFluxInstant(start)) throw bad('Invalid start (use an RFC3339 timestamp or a duration like -7d)');
+    if (stop !== 'now()' && !isFluxInstant(stop)) throw bad('Invalid stop (use an RFC3339 timestamp, a duration or now())');
+    if (every !== undefined && every !== null && every !== '' && !EVERY_RE.test(String(every))) {
+        throw bad('Invalid every (use a duration like 30s, 1m, 1h)');
+    }
+}
 
 /** Query a bucket into wide rows: [{ time, 'meas.field': value, ... }] */
 async function queryWide(bucket, { metrics, start, stop, every } = {}) {
+    assertQueryWindow({ start, stop, every });
     if (!queryApi) throw new Error('historian unavailable');
     const wanted = String(metrics || '').split(',').map((m) => m.trim()).filter(Boolean);
     // Build an explicit selector so a caller can't inject Flux.
@@ -473,6 +487,6 @@ const getStatus = () => ({
 module.exports = {
     ensureWellBucket, archiveTick, finalize, listArchives, getStatus,
     bucketNameFor, getWellConsumption,
-    exportWell, importHistory, queryWide, toCsv, describeArchive, assertArchiveBucket,
+    exportWell, importHistory, queryWide, toCsv, describeArchive, assertArchiveBucket, assertQueryWindow,
     RAW_BUCKET,
 };

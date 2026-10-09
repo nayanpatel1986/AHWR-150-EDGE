@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+*.tmp
+*.log
+Dockerfile
+.dockerignore
+nodemon.json
+# runtime state lives in the /data volume, never in the image
+drilling_state.json
+users.json
+plc_config.json
+dashboard_layout.json

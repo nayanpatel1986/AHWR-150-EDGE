@@ -1,0 +1,58 @@
+[
+  {
+    "id": "pm_eng_oil",
+    "assetId": "engine",
+    "name": "Engine Oil & Filter",
+    "intervalHours": 250,
+    "lastServiceHours": 3980,
+    "lastServiceDate": "2026-05-22"
+  },
+  {
+    "id": "pm_eng_major",
+    "assetId": "engine",
+    "name": "Engine Major Service",
+    "intervalHours": 1000,
+    "lastServiceHours": 3600,
+    "lastServiceDate": "2026-02-18"
+  },
+  {
+    "id": "pm_hpu_filter",
+    "assetId": "hpu",
+    "name": "HPU Hydraulic Filter",
+    "intervalHours": 350,
+    "lastServiceHours": 2950,
+    "lastServiceDate": "2026-03-30"
+  },
+  {
+    "id": "pm_td_gear",
+    "assetId": "topdrive",
+    "name": "Top Drive Gearbox Oil",
+    "intervalHours": 750,
+    "lastServiceHours": 2150,
+    "lastServiceDate": "2026-01-15"
+  },
+  {
+    "id": "pm_dw_brake",
+    "assetId": "drawworks",
+    "name": "Drawworks Brake Inspection",
+    "intervalHours": 200,
+    "lastServiceHours": 3680,
+    "lastServiceDate": "2026-05-28"
+  },
+  {
+    "id": "pm_dw_line",
+    "assetId": "drawworks",
+    "name": "Drill-Line Slip & Cut",
+    "intervalHours": 150,
+    "lastServiceHours": 3800,
+    "lastServiceDate": "2026-06-02"
+  },
+  {
+    "id": "pm_mp_liner",
+    "assetId": "mudpump",
+    "name": "Mud Pump Liners & Valves",
+    "intervalHours": 300,
+    "lastServiceHours": 3300,
+    "lastServiceDate": "2026-04-12"
+  }
+]

@@ -1,0 +1,2 @@
+asyncua==1.1.5
+influxdb-client==1.43.0

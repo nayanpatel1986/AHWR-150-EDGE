@@ -1,0 +1,338 @@
+{
+  "gauges": [
+    {
+      "id": "d1",
+      "label": "WOH",
+      "dataKey": "hook_load",
+      "min": 0,
+      "max": 100,
+      "unit": "ton",
+      "color": "#3182ce",
+      "gridWidth": 3,
+      "size": 160,
+      "majorTicks": 10,
+      "minorTicks": 4,
+      "layout": {
+        "i": "d1",
+        "x": 2,
+        "y": 0,
+        "w": 4,
+        "h": 6,
+        "minW": 3,
+        "minH": 3
+      }
+    },
+    {
+      "id": "d2",
+      "label": "SPP",
+      "dataKey": "SPP-Bar",
+      "min": 0,
+      "max": 5000,
+      "unit": "psi",
+      "color": "#fbbf24",
+      "gridWidth": 3,
+      "size": 160,
+      "majorTicks": 5,
+      "minorTicks": 4,
+      "layout": {
+        "i": "d2",
+        "x": 9,
+        "y": 0,
+        "w": 3,
+        "h": 6,
+        "minW": 3,
+        "minH": 3
+      }
+    },
+    {
+      "id": "d6",
+      "label": "HTD",
+      "dataKey": "htd_rpm",
+      "min": 0,
+      "max": 200,
+      "unit": "RPM",
+      "color": "#4ade80",
+      "gridWidth": 3,
+      "size": 160,
+      "layout": {
+        "i": "d6",
+        "x": 6,
+        "y": 0,
+        "w": 3,
+        "h": 6,
+        "minW": 3,
+        "minH": 3
+      }
+    }
+  ],
+  "sideStats": [
+    {
+      "key": "pump_pressure",
+      "label": "SPP",
+      "unit": "psi",
+      "min": 0,
+      "max": 5000
+    },
+    {
+      "key": "torque",
+      "label": "Drill String Torque",
+      "unit": "daN·m",
+      "min": 0,
+      "max": 20000
+    }
+  ],
+  "_meta": {
+    "version": 9,
+    "updatedAt": "2026-06-12T22:20:52.796Z",
+    "updatedBy": "admin",
+    "updatedByRole": "admin"
+  },
+  "edr": {
+    "stripCount": 3,
+    "pensPerStrip": 2,
+    "strips": [
+      {
+        "id": "strip-1",
+        "title": "Engine / Hookload",
+        "pens": [
+          {
+            "id": "s1p1",
+            "metric": "cat_engine.rpm",
+            "min": 0,
+            "max": 2000,
+            "color": "#38bdf8"
+          },
+          {
+            "id": "s1p2",
+            "metric": "drilling.hook_load",
+            "min": 0,
+            "max": 500,
+            "color": "#fbbf24"
+          }
+        ]
+      },
+      {
+        "id": "strip-2",
+        "title": "Pump",
+        "pens": [
+          {
+            "id": "s2p1",
+            "metric": "mudpump.pressure",
+            "min": 0,
+            "max": 5000,
+            "color": "#4ade80"
+          },
+          {
+            "id": "s2p2",
+            "metric": "mudpump.spm",
+            "min": 0,
+            "max": 200,
+            "color": "#f472b6"
+          }
+        ]
+      },
+      {
+        "id": "strip-3",
+        "title": "Engine Health",
+        "pens": [
+          {
+            "id": "s3p1",
+            "metric": "cat_engine.coolant_temp",
+            "min": 0,
+            "max": 120,
+            "color": "#a78bfa"
+          },
+          {
+            "id": "s3p2",
+            "metric": "cat_engine.oil_pressure",
+            "min": 0,
+            "max": 10,
+            "color": "#fb7185"
+          }
+        ]
+      }
+    ],
+    "presets": []
+  },
+  "units": {
+    "wob": "tonnes",
+    "depth": "m"
+  },
+  "wellInfo": {
+    "rig": "RIG:AHWR-50-III",
+    "well": "WELL-001"
+  },
+  "bottomStats": [
+    {
+      "id": "p1",
+      "title": "DRILLING PARAMETERS",
+      "params": [
+        {
+          "id": "p1_1",
+          "label": "FLOW IN",
+          "dataKey": "flow_in",
+          "unit": "Lt/min"
+        },
+        {
+          "id": "p1_2",
+          "label": "FLOW OUT",
+          "dataKey": "flow_out",
+          "unit": "%"
+        },
+        {
+          "id": "p1_3",
+          "label": "ROP",
+          "dataKey": "rop",
+          "unit": "m/h"
+        },
+        {
+          "id": "p1_4",
+          "label": "SPP",
+          "dataKey": "pump_pressure",
+          "unit": "psi"
+        },
+        {
+          "id": "p1_5",
+          "label": "SPM",
+          "dataKey": "spm",
+          "unit": "SPM"
+        }
+      ],
+      "layout": {
+        "i": "p1",
+        "x": 9,
+        "y": 6,
+        "w": 3,
+        "h": 7,
+        "minW": 2,
+        "minH": 3
+      }
+    },
+    {
+      "id": "p2",
+      "title": "HTD STATUS",
+      "params": [
+        {
+          "id": "p2_1",
+          "label": "IBOP",
+          "dataKey": "ibop_status",
+          "unit": ""
+        },
+        {
+          "id": "p2_2",
+          "label": "ELEVATOR",
+          "dataKey": "elevator_status",
+          "unit": ""
+        },
+        {
+          "id": "p2_3",
+          "label": "BREAK",
+          "dataKey": "brake_status",
+          "unit": ""
+        },
+        {
+          "id": "p2_4",
+          "label": "SPEED",
+          "dataKey": "vertical_speed",
+          "unit": "m/s"
+        },
+        {
+          "id": "p2_5",
+          "label": "LINK TILT",
+          "dataKey": "tilt_status",
+          "unit": ""
+        }
+      ],
+      "layout": {
+        "i": "p2",
+        "x": 2,
+        "y": 6,
+        "w": 4,
+        "h": 7,
+        "minW": 2,
+        "minH": 3
+      }
+    },
+    {
+      "id": "p3",
+      "title": "EQUIPMENT STATUS",
+      "params": [
+        {
+          "id": "p3_1",
+          "label": "HPU",
+          "dataKey": "hpu_status",
+          "unit": ""
+        },
+        {
+          "id": "p3_2",
+          "label": "HTD",
+          "dataKey": "htd_status",
+          "unit": ""
+        },
+        {
+          "id": "p3_3",
+          "label": "PCT",
+          "dataKey": "pct_status",
+          "unit": ""
+        },
+        {
+          "id": "p3_4",
+          "label": "CAT ENGINE",
+          "dataKey": "engine_status",
+          "unit": ""
+        },
+        {
+          "id": "p3_5",
+          "label": "CWK",
+          "dataKey": "cwk_status",
+          "unit": ""
+        }
+      ],
+      "layout": {
+        "i": "p3",
+        "x": 6,
+        "y": 6,
+        "w": 3,
+        "h": 7,
+        "minW": 2,
+        "minH": 3
+      }
+    },
+    {
+      "id": "p5",
+      "title": "CAT ENG",
+      "layout": {
+        "i": "p5",
+        "x": 0,
+        "y": 9,
+        "w": 2,
+        "h": 4,
+        "minW": 2,
+        "minH": 3
+      },
+      "params": [
+        {
+          "id": "p5_1",
+          "label": "RPM",
+          "dataKey": "cat_rpm",
+          "unit": "RPM"
+        },
+        {
+          "id": "p5_2",
+          "label": "OIL P.",
+          "dataKey": "cat_oil_press",
+          "unit": "bar"
+        }
+      ]
+    }
+  ],
+  "visualizerLayout": {
+    "i": "rig-visualizer",
+    "x": 0,
+    "y": 0,
+    "w": 2,
+    "h": 9,
+    "minW": 2,
+    "minH": 4
+  }
+}

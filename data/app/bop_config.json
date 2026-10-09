@@ -1,0 +1,92 @@
+{
+  "enabled": true,
+  "endpoint": "opc.tcp://localhost:49320",
+  "securityMode": "None",
+  "securityPolicy": "None",
+  "tags": [
+    {
+      "name": "Annular Open",
+      "field": "annular_open",
+      "nodeId": "",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Annular Close",
+      "field": "annular_close",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.ANNULAR CLOSE",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Upper Ram Open",
+      "field": "upper_ram_open",
+      "nodeId": "",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Upper Ram Close",
+      "field": "upper_ram_close",
+      "nodeId": "",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Lower Pipe Ram Open",
+      "field": "lower_ram_open",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.BOP LOWER PIPE RAM OPEN",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Lower Pipe Ram Close",
+      "field": "lower_ram_close",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.LOWER PIPE RAM CLOSED",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Accumulator Pressure",
+      "field": "accumulator_pressure",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.ACCUMULATOR PRESSURE",
+      "unit": "bar",
+      "enabled": true
+    },
+    {
+      "name": "Manifold Pressure",
+      "field": "manifold_pressure",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.MANIFOLD PRESSURE",
+      "unit": "bar",
+      "enabled": true
+    },
+    {
+      "name": "Annular Pressure",
+      "field": "annular_pressure",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.ANNULAR PRESSURE",
+      "unit": "bar",
+      "enabled": true
+    },
+    {
+      "name": "Air Pressure",
+      "field": "air_pressure",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.RIG AIR PRESSURE",
+      "unit": "bar",
+      "enabled": true
+    },
+    {
+      "name": "Blind Ram Open",
+      "field": "blind_ram_open",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.BLIND RAM OPEN",
+      "unit": "state",
+      "enabled": true
+    },
+    {
+      "name": "Blind Ram Close",
+      "field": "blind_ram_close",
+      "nodeId": "ns=2;s=Channel1BOP.Device1.BLIND RAM CLOSE",
+      "unit": "state",
+      "enabled": true
+    }
+  ]
+}

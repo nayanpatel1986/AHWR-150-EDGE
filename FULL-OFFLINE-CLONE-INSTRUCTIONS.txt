@@ -1,0 +1,65 @@
+AHWR-EDGE FULL OFFLINE CLONE - 2026-09-30
+
+This folder is a complete offline clone of the source AHWR-EDGE installation.
+
+Included:
+- Backend application
+- Frontend dashboard build
+- Telegraf runtime and S7 collector configuration
+- InfluxDB runtime and database files
+- Python runtime and BOP / OPC UA collector dependencies
+- Node.js runtime
+- AHWR-EDGE rig image and Start/Stop shortcut icon
+- PLC / S7 configuration
+- BOP configuration
+- Users and login data
+- settings.env, including tokens and OPC UA credentials
+- Current application configuration and historian data copied while services were stopped
+- Main live PLC bucket retention set to 180 days
+
+Install on the offline PC:
+1. Extract the TAR.GZ so this folder becomes your AHWR-EDGE install folder.
+   Recommended path:
+   C:\AHWR-EDGE
+   Other paths are also supported by the portable start script.
+2. Open C:\AHWR-EDGE.
+3. Double-click Start AHWR-EDGE, or Start-AHWR-EDGE.bat.
+4. Open:
+   http://localhost:8080
+
+Create Start/Stop shortcuts again:
+1. Right-click Create-AHWR-EDGE-Shortcuts.ps1.
+2. Choose Run with PowerShell.
+3. Use Start AHWR-EDGE and Stop AHWR-EDGE from C:\AHWR-EDGE.
+
+Enable automatic startup/opening after Windows login:
+1. Right-click Install-AHWR-EDGE-Autostart.ps1.
+2. Choose Run with PowerShell.
+3. Restart the PC and log in to Windows. AHWR-EDGE will start and open the browser automatically.
+
+To remove automatic startup later:
+1. Right-click Remove-AHWR-EDGE-Autostart.ps1.
+2. Choose Run with PowerShell.
+
+Update/reinstall on the offline PC:
+1. Copy the new offline package to the offline PC.
+2. In the old C:\AHWR-EDGE folder, double-click Stop-AHWR-EDGE.bat.
+3. Rename old C:\AHWR-EDGE to C:\AHWR-EDGE-old-YYYYMMDD, or delete it only after you confirm the new package works.
+4. Extract the new package to C:\AHWR-EDGE.
+5. Double-click Start-AHWR-EDGE.bat.
+6. If you want automatic startup, run Install-AHWR-EDGE-Autostart.ps1 again from the new folder.
+
+PLC reachable but data not showing:
+1. Open C:\AHWR-EDGE.
+2. Right-click Check-AHWR-EDGE-PLC.ps1.
+3. Choose Run with PowerShell.
+4. Check the PLC TCP result, recent Telegraf errors, and latest AHWR InfluxDB points shown in the window.
+
+For access from another device on the same reachable network, open:
+   http://SERVER_IP:8080
+
+Important:
+- Keep this package private. It contains credentials, tokens, users, and historian data.
+- The start script uses its own folder for app, data, frontend, Telegraf, and BOP paths.
+- If another AHWR-EDGE already exists on the offline PC, stop it first and keep a backup before replacing it.
+- The main live PLC history bucket keeps 180 days of full-rate data.

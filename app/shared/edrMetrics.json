@@ -1,0 +1,1726 @@
+{
+  "categories": [
+    {
+      "id": "drilling",
+      "label": "Drilling",
+      "fields": [
+        {
+          "id": "bit_depth",
+          "label": "Bit Depth",
+          "unit": "m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 3000,
+          "plcTag": "Bit Depth-m"
+        },
+        {
+          "id": "delta_torque",
+          "label": "Delta Torque",
+          "unit": "daN.m",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "Delta Torque-daN*m"
+        },
+        {
+          "id": "hole_depth",
+          "label": "Hole Depth",
+          "unit": "m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 3000,
+          "plcTag": "TOTAL BIT Depth-m"
+        },
+        {
+          "id": "hook_load",
+          "label": "Hook Load",
+          "unit": "ton",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "drilling.hook_load"
+        },
+        {
+          "id": "operation_mode",
+          "label": "Operation",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 4,
+          "plcTag": "Operation-1=DRILLING, 2=TRIP IN, 3=TRIP OUT, 4=CASING"
+        },
+        {
+          "id": "rop",
+          "label": "ROP",
+          "unit": "m/h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 80,
+          "plcTag": "ROP-m/h"
+        },
+        {
+          "id": "wob",
+          "label": "Weight on Bit",
+          "unit": "ton",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "WOB -Ton"
+        }
+      ]
+    },
+    {
+      "id": "drawworks",
+      "label": "Drawworks",
+      "fields": [
+        {
+          "id": "block_position",
+          "label": "Block Position",
+          "unit": "mm",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 50,
+          "plcTag": "ACS Actual Block Position"
+        },
+        {
+          "id": "rope_wear",
+          "label": "Ropes Wear/Km",
+          "unit": "m/h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "Ropes Wear-ton/km"
+        }
+      ]
+    },
+    {
+      "id": "mudpump",
+      "label": "Mud Pump",
+      "fields": [
+        {
+          "id": "delta_pressure",
+          "label": "Delta SPP",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "Delta SPP-Bar"
+        },
+        {
+          "id": "flow_in",
+          "label": "Flow In",
+          "unit": "L/min",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1200,
+          "plcTag": "Mud Pump Inlet Flow-Lt/min"
+        },
+        {
+          "id": "flow_out_percentage",
+          "label": "Flow Out",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "mudpump.flow_out_percentage"
+        },
+        {
+          "id": "flow_out",
+          "label": "Mud Return Flow -%",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "Mud Return Flow -%"
+        },
+        {
+          "id": "pressure",
+          "label": "Pump Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "SPP-Bar"
+        },
+        {
+          "id": "spm",
+          "label": "SPM",
+          "unit": "spm",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 200,
+          "plcTag": "Mud Pumps Total SPM-SPM"
+        },
+        {
+          "id": "total_spm",
+          "label": "Total SPM",
+          "unit": "spm",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 400,
+          "plcTag": "Mud Pumps Totals Strokes-Count"
+        }
+      ]
+    },
+    {
+      "id": "fluid",
+      "label": "Fluid",
+      "fields": [
+        {
+          "id": "trip_tank_percentage",
+          "label": "Active TripTank Volume Gain/Loss -%",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Active TripTank Volume Gain/Loss -%"
+        },
+        {
+          "id": "tank_1",
+          "label": "Mud Tank 1 Volume",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Mud Tank 1 Volume -m^3"
+        },
+        {
+          "id": "tank_2",
+          "label": "Mud Tank 2 Volume",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Mud Tank 2 Volume -m^3"
+        },
+        {
+          "id": "tank_3",
+          "label": "Mud Tank 3 Volume",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Mud Tank 3 Volume -m^3"
+        },
+        {
+          "id": "tank_4",
+          "label": "Mud Tank 4 Volume",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Mud Tank 4 Volume -m^3"
+        },
+        {
+          "id": "tank_gain_loss",
+          "label": "Tank Gain/Loss",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": -50,
+          "defaultMax": 50,
+          "plcTag": "Active Tank Volume Gain/Loss -m^3"
+        },
+        {
+          "id": "total_tank_volume",
+          "label": "Tank Volume",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "Total Active Tank Volume-m^3"
+        },
+        {
+          "id": "trip_tank",
+          "label": "Trip Tank",
+          "unit": "m3",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 50,
+          "plcTag": "Trip Tank Active Mud Volume -m^3"
+        }
+      ]
+    },
+    {
+      "id": "wellhead",
+      "label": "Wellhead / Pressures",
+      "fields": [
+        {
+          "id": "casing_pressure",
+          "label": "Casing Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 350,
+          "plcTag": "Casing Pressure-Bar"
+        },
+        {
+          "id": "tubing_pressure",
+          "label": "Tubing Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 350,
+          "plcTag": "Tubing Pressure-Bar"
+        },
+        {
+          "id": "wellhead_pressure",
+          "label": "Wellhead Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 350,
+          "plcTag": "Wellhead Pressure-Bar"
+        }
+      ]
+    },
+    {
+      "id": "safety",
+      "label": "Safety",
+      "fields": [
+        {
+          "id": "esd_active",
+          "label": "Emergency Stop",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "Emergency Stop-0=NORMAL, 1=ESD ACTIVE"
+        },
+        {
+          "id": "lockout_active",
+          "label": "Equipment Lockout",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "Equipment Lockout-0=NORMAL, 1=LOCKED OUT"
+        }
+      ]
+    },
+    {
+      "id": "bop",
+      "label": "BOP / VersaMax",
+      "fields": [
+        {
+          "id": "annular_open",
+          "label": "Annular Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.annular_open"
+        },
+        {
+          "id": "annular_close",
+          "label": "Annular Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.annular_close"
+        },
+        {
+          "id": "upper_ram_open",
+          "label": "Upper Pipe Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.upper_ram_open"
+        },
+        {
+          "id": "upper_ram_close",
+          "label": "Upper Pipe Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.upper_ram_close"
+        },
+        {
+          "id": "lower_ram_open",
+          "label": "Lower Pipe Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.lower_ram_open"
+        },
+        {
+          "id": "lower_ram_close",
+          "label": "Lower Pipe Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.lower_ram_close"
+        },
+        {
+          "id": "blind_ram_open",
+          "label": "Blind Ram Open",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.blind_ram_open"
+        },
+        {
+          "id": "blind_ram_close",
+          "label": "Blind Ram Close",
+          "unit": "state",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "bop.blind_ram_close"
+        },
+        {
+          "id": "accumulator_pressure",
+          "label": "Accumulator Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.accumulator_pressure"
+        },
+        {
+          "id": "manifold_pressure",
+          "label": "Manifold Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.manifold_pressure"
+        },
+        {
+          "id": "annular_pressure",
+          "label": "Annular Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.annular_pressure"
+        },
+        {
+          "id": "air_pressure",
+          "label": "Rig Air Pressure",
+          "unit": "psi",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 5000,
+          "plcTag": "bop.air_pressure"
+        }
+      ]
+    },
+    {
+      "id": "cat_engine",
+      "label": "CAT Engine",
+      "fields": [
+        {
+          "id": "battery_voltage",
+          "label": "Battery Voltage",
+          "unit": "V",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 32,
+          "plcTag": "CAT Engine ElectricalPotential"
+        },
+        {
+          "id": "pedal_position",
+          "label": "CAT Engine ACCELERATION PEDAL POSITION",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 50,
+          "plcTag": "CAT Engine ACCELERATION PEDAL POSITION"
+        },
+        {
+          "id": "coolant_level",
+          "label": "CAT Engine CoolantLevelPercentage",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "CAT Engine CoolantLevelPercentage"
+        },
+        {
+          "id": "fuel_temp",
+          "label": "CAT Engine FuelTemperature",
+          "unit": "C",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "CAT Engine FuelTemperature"
+        },
+        {
+          "id": "total_fuel",
+          "label": "CAT Engine TotalFuelUsed",
+          "unit": "L",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "CAT Engine TotalFuelUsed"
+        },
+        {
+          "id": "total_hours",
+          "label": "CAT Engine TotalHoursOperation",
+          "unit": "h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10000,
+          "plcTag": "CAT Engine TotalHoursOperation"
+        },
+        {
+          "id": "run_hours",
+          "label": "CAT RunHours",
+          "unit": "h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10000,
+          "plcTag": "CAT RunHours"
+        },
+        {
+          "id": "source_cmd",
+          "label": "CAT Sourcecmd",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 6,
+          "plcTag": "CAT Sourcecmd-0=NONE, 1=LOCAL, 2=REMOTE, 3=MANUAL, 4=AUTO, 5=DCC, 6=---"
+        },
+        {
+          "id": "status",
+          "label": "CAT Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 7,
+          "plcTag": "CAT status- -1=UNKNOWN, 0=READY, 1=IN PROGRESS, 2=STATUS DONE, 3=EMERGENCY NOT OK, 4=NOT READY, 5=FAULT, 6 = RUNNING + FAULT, 7=STOP FORCED "
+        },
+        {
+          "id": "coolant_temp",
+          "label": "Coolant Temp",
+          "unit": "C",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "CAT Engine CoolantTemperature"
+        },
+        {
+          "id": "load",
+          "label": "Engine Load",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "CAT Engine TorquePercentage"
+        },
+        {
+          "id": "rpm",
+          "label": "Engine RPM",
+          "unit": "rpm",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2000,
+          "plcTag": "CAT Engine speed RPM"
+        },
+        {
+          "id": "fuel_pressure",
+          "label": "Fuel Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 20,
+          "plcTag": "CAT Engine FuelDeliveryPressure"
+        },
+        {
+          "id": "fuel_rate",
+          "label": "Fuel Rate",
+          "unit": "L/h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "CAT Engine FuelRate"
+        },
+        {
+          "id": "oil_pressure",
+          "label": "Oil Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10,
+          "plcTag": "CAT Engine OilPressure"
+        }
+      ]
+    },
+    {
+      "id": "cat_engine_2",
+      "label": "CAT Engine 2",
+      "fields": [
+        {
+          "id": "coolant_temp",
+          "label": "Coolant Temp",
+          "unit": "C",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "cat_engine_2.coolant_temp"
+        },
+        {
+          "id": "load",
+          "label": "Engine Load",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "cat_engine_2.load"
+        },
+        {
+          "id": "rpm",
+          "label": "Engine RPM",
+          "unit": "rpm",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2000,
+          "plcTag": "cat_engine_2.rpm"
+        },
+        {
+          "id": "fuel_rate",
+          "label": "Fuel Rate",
+          "unit": "L/h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "cat_engine_2.fuel_rate"
+        },
+        {
+          "id": "oil_pressure",
+          "label": "Oil Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10,
+          "plcTag": "cat_engine_2.oil_pressure"
+        }
+      ]
+    },
+    {
+      "id": "acs",
+      "label": "ACS",
+      "fields": [
+        {
+          "id": "calibration_status",
+          "label": "ACS Calibration Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 11,
+          "plcTag": "ACS Calibration status--1=UNKNOWN, 1=SEQ IN PROGRESS, 2=NOT CALIBRATED, 3=CALIBRATED,10=MOVE UP TO CROWN, 10=MOVE UP TO CROWN, 11=MOVE DOWN TO TAG LOW "
+        },
+        {
+          "id": "status",
+          "label": "ACS Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 3,
+          "plcTag": "ACS status-0=UNKNONE, 1=ON, 2=OFF, 3=DISABLE "
+        },
+        {
+          "id": "block_position",
+          "label": "Block Position",
+          "unit": "mm",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 50,
+          "plcTag": "acs.block_position"
+        },
+        {
+          "id": "bottomsaver",
+          "label": "Bottomsaver",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "ACS Bottomsaver in mm"
+        },
+        {
+          "id": "crownsaver",
+          "label": "Crownsaver",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "ACS Crownsaver in mm"
+        },
+        {
+          "id": "floorsaver",
+          "label": "Floorsaver",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "ACS floorsaver in mm"
+        },
+        {
+          "id": "lower_tag",
+          "label": "Lower Tag",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "ACS Lowertag position in mm"
+        },
+        {
+          "id": "upper_tag",
+          "label": "Upper Tag",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "ACS UPPERTAG POSITION mm"
+        }
+      ]
+    },
+    {
+      "id": "hpu",
+      "label": "HPU",
+      "fields": [
+        {
+          "id": "aux_pressure",
+          "label": "Aux Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 300,
+          "plcTag": "HPU Auxilary line pressure in bar"
+        },
+        {
+          "id": "discharge_pressure",
+          "label": "Discharge Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 300,
+          "plcTag": "HPU Discharge line pressure in bar"
+        },
+        {
+          "id": "gate_valve",
+          "label": "HPU Gate Valve",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 1,
+          "plcTag": "HPU Gate valve-1=OPEN, 0=CLOSE"
+        },
+        {
+          "id": "htd_pump1_flow_sp",
+          "label": "HTD PUMP-2 Flow SP",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpHTD pump1 flow set point"
+        },
+        {
+          "id": "htd_pump1_flow",
+          "label": "HTD PUMP-2 Flow Rate",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpHTD pump1 actual flow %"
+        },
+        {
+          "id": "htd_pump1_press_sp",
+          "label": "HTD PUMP-2 Press SP",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpHTD pump1 pressure set point"
+        },
+        {
+          "id": "htd_pump1_press",
+          "label": "HTD PUMP-2 Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpHTD pump1 Actual Press bar"
+        },
+        {
+          "id": "htd_pump1_status",
+          "label": "HTD PUMP-2 Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU HydrPumpHTD pump1 status-0=NOT READY, 1=READY, 2=ENABLE"
+        },
+        {
+          "id": "htd_pump2_flow_sp",
+          "label": "HTD PUMP-4 Flow SP",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpHTD pump2 flow set point"
+        },
+        {
+          "id": "htd_pump2_flow",
+          "label": "HTD PUMP-4 Flow Rate",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpHTD pump2 actual flow %"
+        },
+        {
+          "id": "htd_pump2_press_sp",
+          "label": "HTD PUMP-4 Press SP",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpHTD pump2 pressure set point"
+        },
+        {
+          "id": "htd_pump2_press",
+          "label": "HTD PUMP-4 Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpHTD pump2 Actual Press bar"
+        },
+        {
+          "id": "htd_pump2_status",
+          "label": "HTD PUMP-4 Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU HydrPumpHTD pump2 status-0=NOT READY, 1=READY, 2=ENABLE"
+        },
+        {
+          "id": "pdw_pump_flow_sp",
+          "label": "PUMP-3 PDW Flow SP",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpPDW actual flow set point"
+        },
+        {
+          "id": "pdw_pump_flow",
+          "label": "PUMP-3 PDW Flow Rate",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU HydrPumpPDW actual flow %"
+        },
+        {
+          "id": "pdw_pump_press_sp",
+          "label": "PUMP-3 PDW Press SP",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpPDW actual pressure set point"
+        },
+        {
+          "id": "pdw_pump_press",
+          "label": "PUMP-3 PDW Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU HydrPumpPDW Actual Press bar"
+        },
+        {
+          "id": "pdw_pump_status",
+          "label": "PUMP-3 PDW Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU HydrPumpPDW status-0=NOT READY, 1=READY, 2=ENABLE"
+        },
+        {
+          "id": "oil_filter_1",
+          "label": "HPU Oil Filter:1",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:1-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_2",
+          "label": "HPU Oil Filter:2",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:2-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_3",
+          "label": "HPU Oil Filter:3",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:3-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_4",
+          "label": "HPU Oil Filter:4",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:4-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_5",
+          "label": "HPU Oil Filter:5",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:5-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_6",
+          "label": "HPU Oil Filter:6",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:6-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_7",
+          "label": "HPU Oil Filter:7",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:7-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_filter_8",
+          "label": "HPU Oil Filter:8",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "HPU Oil filter:8-1=OK, 0=CLOGGED"
+        },
+        {
+          "id": "oil_level_status",
+          "label": "HPU Oil Level",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 4,
+          "plcTag": "HPU Oil level-0=Level OK, 1=Level Low, 2=Level Low-Low, 3=Level High, 4= Level High-High"
+        },
+        {
+          "id": "oil_temp_status",
+          "label": "HPU Oil Temp",
+          "unit": "C",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 3,
+          "plcTag": "HPU Oil temp-0=Temp. OK, 1=Temp. Low, 2=Temp. High, 3=Temp. High-High"
+        },
+        {
+          "id": "op_mode",
+          "label": "HPU Oprmode-0 = Unknown, 1 = Drilling 2 = RigUp",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU Oprmode-0 = Unknown, 1 = Drilling 2 = RigUp"
+        },
+        {
+          "id": "pilot_pressure",
+          "label": "HPU Pilot ActLSPress",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "HPU Pilot ActLSPress bar"
+        },
+        {
+          "id": "pilot_status",
+          "label": "HPU Pilot Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU Pilot status-0=OFF, 1=ON, 2=FAULT"
+        },
+        {
+          "id": "run_hours",
+          "label": "HPU RUN HOURS",
+          "unit": "h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10000,
+          "plcTag": "HPU RUN HOURS"
+        },
+        {
+          "id": "status",
+          "label": "HPU Status-0 = OFF, 1 = ON In IDLE, 2 = ON",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HPU status-0 = OFF, 1 = ON in IDLE, 2 = ON "
+        },
+        {
+          "id": "oil_level",
+          "label": "Oil Level",
+          "unit": "%",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 100,
+          "plcTag": "HPU ActOil level in %"
+        },
+        {
+          "id": "oil_temp",
+          "label": "Oil Temp",
+          "unit": "C",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 120,
+          "plcTag": "HPU ActTemp in c"
+        }
+      ]
+    },
+    {
+      "id": "htd",
+      "label": "HTD",
+      "fields": [
+        {
+          "id": "brake_status",
+          "label": "HTD Brake Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "HTD Brake Status-0=Unknown, 1 = Closing, 2 = Closed, 3 = Opening, 4 = Open, 5 = Fault"
+        },
+        {
+          "id": "rpm_command",
+          "label": "HTD COMMAND",
+          "unit": "rpm",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 250,
+          "plcTag": "HTD rpm COMMAND"
+        },
+        {
+          "id": "elevator_status",
+          "label": "HTD Elevator Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "HTD Elevator Status-0= Uncknown, 1 = Opening, 2 = Closing, 3 = Open, 4 = Close, 5 = Fault"
+        },
+        {
+          "id": "gear_status",
+          "label": "HTD GEAR Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 8,
+          "plcTag": "HTD GEAR status--2=UNKNOWN, -1=FAULT, 1=GEAR 1, 2=GEAR 2, 3=GEAR 3, 4=GEAR 4. 5= GEAR 1 REGENERATIVE, 6= GEAR 2 REGENERATIVE, 7=GEAR 3 REGENERATIVE, 8= GEAR 4 REGENERATIVE"
+        },
+        {
+          "id": "ibop_status",
+          "label": "HTD IBOP Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "HTD IBOP Status-0= Uncknown, 1 = Opening, 2 = Closing, 3 = Open, 4 = Close, 5 = Fault"
+        },
+        {
+          "id": "inclination_status",
+          "label": "HTD Inclination Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 8,
+          "plcTag": "HTD Inclination status-1= Inclination IN in progress, 2=Inclination IN, 3=Inclination OUT in progress, 4=Inclinated OUT, 5=Half Way, 6=Stand Still, 7=Tilted In, 8=Tilted Out"
+        },
+        {
+          "id": "link_rotation_status",
+          "label": "HTD Link Rotation Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 7,
+          "plcTag": "HTD Link rotation Status-0= Uncknown, 1 = Unlocking, 2 = Unlocked, 3 = Rot. Fwd, 4 = Rot. Bwd, 5 = Locking, 6 = Locked ,  7 = Fault"
+        },
+        {
+          "id": "tilt_status",
+          "label": "HTD Link Tilt Status-0 = None, 1 = Float ON, 2 = Vertical, 3 = Float OFF, 4 = Extend, 5 = Retract, 6 = Fault",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 6,
+          "plcTag": "HTD Link Tilt status-0 = None, 1 = Float ON, 2 = Vertical, 3 = Float OFF, 4 = Extend, 5 = Retract, 6 = Fault"
+        },
+        {
+          "id": "lube_status",
+          "label": "HTD Lube Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 3,
+          "plcTag": "HTD Lube Status-0=OFF, 1=CMD RUN, 2=RUNNING, 3 = FAULT"
+        },
+        {
+          "id": "op_mode",
+          "label": "HTD Opmode-0 = Unknown, 1 = Dolly 2 = Link",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HTD opmode-0 = Unknown, 1 = Dolly 2 = Link"
+        },
+        {
+          "id": "rpm_request",
+          "label": "HTD Request",
+          "unit": "rpm",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 250,
+          "plcTag": "HTD rpm Request"
+        },
+        {
+          "id": "rotation_status",
+          "label": "HTD Rotation Status-0 = Stand Still, 1 = Rotation FWD, 2 = Rotation BWD, 3 = Neutral",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 3,
+          "plcTag": "HTD Rotation Status-0 = Stand still, 1 = Rotation FWD, 2 = Rotation BWD, 3 = Neutral"
+        },
+        {
+          "id": "rpm",
+          "label": "HTD RPM",
+          "unit": "rpm",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 250,
+          "plcTag": "HTD rpm"
+        },
+        {
+          "id": "status",
+          "label": "HTD Status-0 = OFF, 1 = ON In IDLE, 2 = ON",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HTD status-0 = OFF, 1 = ON in IDLE, 2 = ON "
+        },
+        {
+          "id": "suspension_status",
+          "label": "HTD Suspensions Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "HTD suspensions Status-0=none, 1= in push, 2= in pull"
+        },
+        {
+          "id": "tilt_status_db65",
+          "label": "HTD Tilt Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 6,
+          "plcTag": "HTD Tilt status-1= Tilting IN, 2=Tilt IN, 3=Tilting OUT, 4=Tilt OUT, 5=Half Way, 6=Stand Still"
+        },
+        {
+          "id": "torque",
+          "label": "HTD Torque",
+          "unit": "daN.m",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2000,
+          "plcTag": "HTD TORQUE DaNm"
+        },
+        {
+          "id": "torque_command",
+          "label": "HTD Torque COMMAND",
+          "unit": "daN.m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "HTD torque COMMAND"
+        },
+        {
+          "id": "torque_request",
+          "label": "HTD Torque Request",
+          "unit": "daN.m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "HTD torque Request"
+        },
+        {
+          "id": "working_hours",
+          "label": "HTD WORKING HOURS",
+          "unit": "h",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10000,
+          "plcTag": "HTD WORKING HOURS"
+        },
+        {
+          "id": "working_minutes",
+          "label": "HTD WORKING MINUTES",
+          "unit": "min",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 10000,
+          "plcTag": "HTD WORKING MINUTES"
+        },
+        {
+          "id": "work_mode",
+          "label": "HTD Workmode-0 = Unknown, 1 = Drill, 2 = Spin, 3 = Torque",
+          "unit": "daN.m",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 3,
+          "plcTag": "HTD workmode-0 = Unknown, 1 = Drill, 2 = Spin, 3 = Torque"
+        },
+        {
+          "id": "inclination",
+          "label": "Inclination",
+          "unit": "deg",
+          "precision": 1,
+          "defaultMin": -90,
+          "defaultMax": 90,
+          "plcTag": "HTD Inclination angle in %"
+        },
+        {
+          "id": "vertical_speed",
+          "label": "Vertical Speed",
+          "unit": "mm/sec",
+          "precision": 2,
+          "defaultMin": -5,
+          "defaultMax": 5,
+          "plcTag": "HTD vertical speed"
+        }
+      ]
+    },
+    {
+      "id": "cwk",
+      "label": "CWK",
+      "fields": [
+        {
+          "id": "clamp_force",
+          "label": "Clamp Force",
+          "unit": "kN",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "CWK Clamp Actcloseforce"
+        },
+        {
+          "id": "clamp_pressure",
+          "label": "Clamp Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 300,
+          "plcTag": "CWK Clamp close pressure"
+        },
+        {
+          "id": "carrier_status",
+          "label": "CWK Carrier",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 6,
+          "plcTag": "CWK Carrier-1= STOP, 2=PARKING POSITION, 3= WORK POSITION, 4= LIFTING, 5=LOWERING, 6=FAULT"
+        },
+        {
+          "id": "clamp_status",
+          "label": "CWK Clamp",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "CWK Clamp-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT"
+        },
+        {
+          "id": "clamp_force_ok",
+          "label": "CWK Clamp Actcloeforce Ok",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "CWK Clamp Actcloeforce ok"
+        },
+        {
+          "id": "clamp_pressure_ok",
+          "label": "CWK Clamp Close Pressure OK",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "CWK Clamp close pressure OK"
+        },
+        {
+          "id": "indexer_dx",
+          "label": "CWK Indexer DX",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 3,
+          "plcTag": "CWK Indexer DX-1=UP, 2=DOWN, 3=FAULT"
+        },
+        {
+          "id": "indexer_sx",
+          "label": "CWK Indexer SX",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 3,
+          "plcTag": "CWK Indexer SX-1=UP, 2=DOWN, 3=FAULT"
+        },
+        {
+          "id": "kickers_dx",
+          "label": "CWK Kickers DX",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 3,
+          "plcTag": "CWK Kickers DX-1=EXTEND, 2=RETRACT, 3=FAULT"
+        },
+        {
+          "id": "kickers_sx",
+          "label": "CWK Kickers SX",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 3,
+          "plcTag": "CWK Kickers SX-1=EXTEND, 2=RETRACT, 3=FAULT"
+        },
+        {
+          "id": "skate_status",
+          "label": "CWK Skate",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 5,
+          "plcTag": "CWK Skate-1=IDLE, 2=PARKING POSITION, 3=FWD CMD, 4=BWD CMD, 5=FAULT"
+        },
+        {
+          "id": "slide_status",
+          "label": "CWK Slide",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": -1,
+          "defaultMax": 5,
+          "plcTag": "CWK Slide-1=IDLE, 2=PARKING POSITION, 3=FWD CMD, 4=BWD CMD, 5=FAULT"
+        },
+        {
+          "id": "source_cmd",
+          "label": "CWK Sourcecmd-0 = UNKNOWN, 1 = DCC, 2 = RADIOCONTROL",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "CWK sourcecmd-0 = UNKNOWN, 1 = DCC, 2 = RADIOCONTROL"
+        },
+        {
+          "id": "status",
+          "label": "CWK Status",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "CWK status-0= NOT IN PARK POSITION, 1=PARK POSITION "
+        }
+      ]
+    },
+    {
+      "id": "pct",
+      "label": "PCT",
+      "fields": [
+        {
+          "id": "clamp_low_pressure",
+          "label": "Clamp Lower Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 300,
+          "plcTag": "PCT Clamp low close pressure"
+        },
+        {
+          "id": "clamp_up_pressure",
+          "label": "Clamp Upper Pressure",
+          "unit": "bar",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 300,
+          "plcTag": "PCT Clamp up close pressure"
+        },
+        {
+          "id": "last_makeup_torque",
+          "label": "Last Makeup Torque",
+          "unit": "daN.m",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "PCT ClampLastMakeUpTorque-daN*m"
+        },
+        {
+          "id": "makeup_torque",
+          "label": "Makeup Torque",
+          "unit": "daN.m",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "PCT Makeup Torque-daN*m"
+        },
+        {
+          "id": "clamp_low_force",
+          "label": "PCT Clamp Low ActCloseForce",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "PCT Clamp low ActCloseForce"
+        },
+        {
+          "id": "clamp_low_force_ok",
+          "label": "PCT Clamp Low ActCloseForce Ok",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "PCT Clamp low ActCloseForce ok"
+        },
+        {
+          "id": "clamp_low_pressure_ok",
+          "label": "PCT Clamp Low Close Pressure Ok",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "PCT Clamp low close pressure ok"
+        },
+        {
+          "id": "clamp_low_open_ok",
+          "label": "PCT Clamp Low Open Pressure Ok",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "PCT Clamp low open pressure ok"
+        },
+        {
+          "id": "clamp_rotation_status",
+          "label": "PCT Clamp Roatation",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "PCT Clamp Roatation-0=NONE, 1=NOT ALLIGNED, 2=ALLIGNED, 3=MAKE-UP, 4=BREAK-OUT, 5=FAULT"
+        },
+        {
+          "id": "clamp_up_force",
+          "label": "PCT Clamp Up ActCloseForce",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "PCT Clamp up ActCloseForce"
+        },
+        {
+          "id": "clamp_up_force_ok",
+          "label": "PCT Clamp Up ActCloseForce Ok",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "PCT Clamp up ActCloseForce ok"
+        },
+        {
+          "id": "clamp_up_pressure_ok",
+          "label": "PCT Clamp Up Close Pressure Ok",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "PCT Clamp up close pressure ok"
+        },
+        {
+          "id": "clamp_up_open_ok",
+          "label": "PCT Clamp Up Open Pressure Ok",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1,
+          "plcTag": "PCT Clamp up open pressure ok"
+        },
+        {
+          "id": "clamp_low_status",
+          "label": "PCT Clamplow",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "PCT Clamplow-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT"
+        },
+        {
+          "id": "clamp_up_status",
+          "label": "PCT ClampUp",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 5,
+          "plcTag": "PCT ClampUp-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT"
+        },
+        {
+          "id": "dolly_direction",
+          "label": "PCT DOLLY UP DOWN",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "PCT DOLLY UP DOWN-0=NO CMD ACTIVE, 1=MOVE UP, 2=MOVE DOWN"
+        },
+        {
+          "id": "dolly_status",
+          "label": "PCT DollyWorkPark",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 6,
+          "plcTag": "PCT DollyWorkPark-0=NONE, 1=OUT PARK. POS, 2=MOVE WORK, 3=MOVE PARK, 4=IN PARK, 5=FAULT, 6=in work"
+        },
+        {
+          "id": "op_mode",
+          "label": "PCT Operation Mode-0 = UNKNOWN, 1 = NORMAL, 2 = MANUAL",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "PCT Operation mode-0 = UNKNOWN, 1 = NORMAL, 2 = MANUAL"
+        },
+        {
+          "id": "rotation_breakout_pressure",
+          "label": "PCT ROTATION ActBOutPress",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "PCT ROTATION ActBOutPress"
+        },
+        {
+          "id": "rotation_makeup_pressure",
+          "label": "PCT ROTATION ActMakeUpPress",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 500,
+          "plcTag": "PCT ROTATION ActMakeUpPress"
+        },
+        {
+          "id": "sequence",
+          "label": "PCT Sequence",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 4,
+          "plcTag": "PCT Sequence-0=OFF, 1=MAKE-UP, 2=BREAK-OUT, 3=RESET, 4=FAULT"
+        },
+        {
+          "id": "spinner_floating",
+          "label": "PCT SPINNER FLOATING",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 10,
+          "plcTag": "PCT SPINNER FLOATING-0=OFF, 1=ON, 10=SPINNER NOT MOUNTED"
+        },
+        {
+          "id": "spinner_gripper_status",
+          "label": "PCT SPINNER GRIPPER",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 10,
+          "plcTag": "PCT SPINNER GRIPPER-0=NONE, 1=OPENING, 2=CLOSING, 3=OPEN, 4=CLOSE, 5=FAULT, 10=SPINNER NOT MOUNTED"
+        },
+        {
+          "id": "spinner_rotation_status",
+          "label": "PCT Spinner Rotation",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 10,
+          "plcTag": "PCT Spinner Rotation-0=NO CMD ACTIVE, 1=FULLY UP, 2=FULLY DOWN, 3=MAKE-UP, 4= BREAK-OUT. 10=SPINNER NOT MOUNTED"
+        },
+        {
+          "id": "spinner_breakout_torque",
+          "label": "PCT SpinnerActBOutTorque",
+          "unit": "daN.m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "PCT SpinnerActBOutTorque-daN*m"
+        },
+        {
+          "id": "spinner_makeup_torque",
+          "label": "PCT SpinnerActMakeUpTorque",
+          "unit": "daN.m",
+          "precision": 1,
+          "defaultMin": 0,
+          "defaultMax": 20000,
+          "plcTag": "PCT SpinnerActMakeUpTorque-daN*m"
+        },
+        {
+          "id": "status",
+          "label": "PCT STATUS-0 = OFF, 1 = ON In IDLE, 2 = ON",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 2,
+          "plcTag": "PCT STATUS-0 = OFF, 1 = ON in IDLE, 2 = ON"
+        }
+      ]
+    },
+    {
+      "id": "opcua_demo",
+      "label": "OPC UA (device)",
+      "fields": [
+        {
+          "id": "dip",
+          "label": "Dip Signal",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": -100,
+          "defaultMax": 100,
+          "plcTag": "opcua_demo.dip"
+        },
+        {
+          "id": "fast_counter",
+          "label": "Fast Counter",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "opcua_demo.fast_counter"
+        },
+        {
+          "id": "random_uint",
+          "label": "Random Uint",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 4000000,
+          "plcTag": "opcua_demo.random_uint"
+        },
+        {
+          "id": "slow_counter",
+          "label": "Slow Counter",
+          "unit": "",
+          "precision": 0,
+          "defaultMin": 0,
+          "defaultMax": 1000,
+          "plcTag": "opcua_demo.slow_counter"
+        },
+        {
+          "id": "spike",
+          "label": "Spike Signal",
+          "unit": "",
+          "precision": 1,
+          "defaultMin": -100,
+          "defaultMax": 100,
+          "plcTag": "opcua_demo.spike"
+        }
+      ]
+    }
+  ],
+  "defaultLayout": {
+    "stripCount": 3,
+    "pensPerStrip": 2,
+    "strips": [
+      {
+        "id": "strip-1",
+        "title": "Engine / Hookload",
+        "pens": [
+          {
+            "id": "s1p1",
+            "metric": "cat_engine.rpm",
+            "min": 0,
+            "max": 2000,
+            "color": "#38bdf8"
+          },
+          {
+            "id": "s1p2",
+            "metric": "drilling.hook_load",
+            "min": 0,
+            "max": 500,
+            "color": "#fbbf24"
+          }
+        ]
+      },
+      {
+        "id": "strip-2",
+        "title": "Pump",
+        "pens": [
+          {
+            "id": "s2p1",
+            "metric": "mudpump.pressure",
+            "min": 0,
+            "max": 5000,
+            "color": "#4ade80"
+          },
+          {
+            "id": "s2p2",
+            "metric": "mudpump.spm",
+            "min": 0,
+            "max": 200,
+            "color": "#f472b6"
+          }
+        ]
+      },
+      {
+        "id": "strip-3",
+        "title": "Engine Health",
+        "pens": [
+          {
+            "id": "s3p1",
+            "metric": "cat_engine.coolant_temp",
+            "min": 0,
+            "max": 120,
+            "color": "#a78bfa"
+          },
+          {
+            "id": "s3p2",
+            "metric": "cat_engine.oil_pressure",
+            "min": 0,
+            "max": 10,
+            "color": "#fb7185"
+          }
+        ]
+      }
+    ]
+  }
+}

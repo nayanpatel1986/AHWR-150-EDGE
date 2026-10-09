@@ -1,0 +1,10 @@
+{
+    "ignore": [
+        "dashboard_layout.json",
+        "plc_config.json",
+        "drilling_state.json",
+        "users.json",
+        "telegraf_config/*",
+        "test_save.js"
+    ]
+}

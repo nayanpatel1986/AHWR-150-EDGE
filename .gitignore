@@ -1,0 +1,64 @@
+# Dependencies and build caches
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.cache/
+*.bak
+*.bak-*
+
+# Machine-specific secrets. Never commit the live files.
+settings.env
+.env
+**/.env
+**/.env.*
+!settings.env.example
+!**/.env.example
+
+# Authentication and connection records
+data/app/users.json
+app/backend/defaults/users.json
+data/app/connections.json
+data/app/sync_config.json
+data/app/etp_config.json
+
+# Live operational records and temporary state
+logs/
+run/
+data/influx/
+data/app/sync_buffer/
+data/app/sync_deadletter/
+data/app/*.tmp
+data/app/*.bak*
+data/app/activity_log.json
+data/app/activity_state.json
+data/app/alarms_events.json
+data/app/calibration_log.json
+data/app/central_messages.json
+data/app/cmms_logbook.json
+data/app/cmms_overhauls.json
+data/app/cmms_work_orders.json
+data/app/downtime_log.json
+data/app/drilling_state.json
+data/app/efficiency_state.json
+data/app/maintenance_state.json
+data/app/runhours_daily.json
+data/app/runhours_sessions.json
+data/app/sync_state.json
+data/app/well_archive_state.json
+data/app/wells.json
+migration/influx_backup/
+
+# Bundled third-party runtimes are part of the offline transfer image, not Git.
+# They include files above GitHub's per-file limit and should be rebuilt or
+# copied from the secured offline package.
+runtime/
+
+# Windows shortcuts contain machine-specific absolute paths.
+*.lnk
+
+# Editor / OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

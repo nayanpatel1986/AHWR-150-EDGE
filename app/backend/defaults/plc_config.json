@@ -1,0 +1,2594 @@
+{
+  "slaves": [
+    {
+      "name": "AHWR_PLC",
+      "protocol": "s7comm",
+      "ip": "192.168.0.11",
+      "port": 102,
+      "rack": 0,
+      "slot": 0,
+      "metrics": [
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "Total Active Tank Volume-m^3",
+              "address": "DB5380.R40"
+            },
+            {
+              "name": "Active Tank Volume Gain/Loss -m^3",
+              "address": "DB5380.R50"
+            },
+            {
+              "name": "Trip Tank Active Mud Volume -m^3",
+              "address": "DB5380.R56"
+            },
+            {
+              "name": "Active TripTank Volume Gain/Loss -%",
+              "address": "DB5380.R78"
+            },
+            {
+              "name": "Mud Tank 1 Volume -m^3",
+              "address": "DB5380.R378"
+            },
+            {
+              "name": "Mud Tank 2 Volume -m^3",
+              "address": "DB5380.R388"
+            },
+            {
+              "name": "Mud Tank 3 Volume -m^3",
+              "address": "DB5380.R398"
+            },
+            {
+              "name": "Mud Tank 4 Volume -m^3",
+              "address": "DB5380.R408"
+            },
+            {
+              "name": "Mud Return Flow -%",
+              "address": "DB5380.R666"
+            },
+            {
+              "name": "Mud Pump Inlet Flow-Lt/min",
+              "address": "DB259.R6"
+            },
+            {
+              "name": "Mud Pumps Total SPM-SPM",
+              "address": "DB416.R2"
+            },
+            {
+              "name": "SpeedFdbk_SPM",
+              "address": "DB416.R2",
+              "scale": 1
+            },
+            {
+              "name": "Mud Pumps Total SPM Backup-SPM",
+              "address": "DB416.R114",
+              "scale": 1
+            },
+            {
+              "name": "Mud Pumps Total SPM DB166-SPM",
+              "address": "DB166.R0",
+              "scale": 1
+            },
+            {
+              "name": "Mud Pumps Totals Strokes-Count",
+              "address": "DB416.R168"
+            }
+          ],
+          "tags": {
+            "equipment": "DAS"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "Weight on Hook -Ton",
+              "address": "DB3191.R0"
+            },
+            {
+              "name": "Weight on Bit -Ton",
+              "address": "DB3191.R10"
+            },
+            {
+              "name": "Bit Depth-m",
+              "address": "DB3191.R20"
+            },
+            {
+              "name": "TOTAL BIT Depth-m",
+              "address": "DB3191.R26"
+            },
+            {
+              "name": "Operation-1=DRILLING, 2=TRIP IN, 3=TRIP OUT, 4=CASING",
+              "address": "DB3191.B52"
+            },
+            {
+              "name": "SLIP IN",
+              "address": "DB709.X14.0"
+            },
+            {
+              "name": "SLIP OUT",
+              "address": "DB709.X14.1"
+            },
+            {
+              "name": "SPP-Bar",
+              "address": "DB3191.R72"
+            },
+            {
+              "name": "Delta SPP-Bar",
+              "address": "DB3191.R84"
+            },
+            {
+              "name": "ROP-m/h",
+              "address": "DB3191.R96"
+            },
+            {
+              "name": "Ropes Wear-ton/km",
+              "address": "DB3191.R106"
+            },
+            {
+              "name": "Delta Torque-daN*m",
+              "address": "DB3191.R116"
+            },
+            {
+              "name": "Drill String Speed-RPM",
+              "address": "DB3191.R128"
+            },
+            {
+              "name": "Drill String Torque-daN*m",
+              "address": "DB3191.R134"
+            }
+          ],
+          "tags": {
+            "equipment": "Drilling"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "PCT Operation mode-0 = UNKNOWN, 1 = NORMAL, 2 = MANUAL",
+              "address": "DB244.B0"
+            },
+            {
+              "name": "PCT STATUS-0 = OFF, 1 = ON in IDLE, 2 = ON",
+              "address": "DB244.B20"
+            },
+            {
+              "name": "PCT DOLLY UP DOWN-0=NO CMD ACTIVE, 1=MOVE UP, 2=MOVE DOWN",
+              "address": "DB244.B36"
+            },
+            {
+              "name": "PCT DollyWorkPark-0=NONE, 1=OUT PARK. POS, 2=MOVE WORK, 3=MOVE PARK, 4=IN PARK, 5=FAULT, 6=in work",
+              "address": "DB244.B42"
+            },
+            {
+              "name": "PCT Spinner Rotation-0=NO CMD ACTIVE, 1=FULLY UP, 2=FULLY DOWN, 3=MAKE-UP, 4= BREAK-OUT. 10=SPINNER NOT MOUNTED",
+              "address": "DB244.B56"
+            },
+            {
+              "name": "PCT SPINNER GRIPPER-0=NONE, 1=OPENING, 2=CLOSING, 3=OPEN, 4=CLOSE, 5=FAULT, 10=SPINNER NOT MOUNTED",
+              "address": "DB244.B88"
+            },
+            {
+              "name": "PCT SPINNER FLOATING-0=OFF, 1=ON, 10=SPINNER NOT MOUNTED",
+              "address": "DB244.B96"
+            },
+            {
+              "name": "PCT SpinnerActMakeUpTorque-daN*m",
+              "address": "DB244.R72"
+            },
+            {
+              "name": "PCT SpinnerActBOutTorque-daN*m",
+              "address": "DB244.R78"
+            },
+            {
+              "name": "PCT ClampUp-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT",
+              "address": "DB244.B100"
+            },
+            {
+              "name": "PCT ROTATION ActMakeUpPress",
+              "address": "DB244.R72"
+            },
+            {
+              "name": "PCT ROTATION ActBOutPress",
+              "address": "DB244.R78"
+            },
+            {
+              "name": "PCT Clamp up close pressure",
+              "address": "DB244.R102"
+            },
+            {
+              "name": "PCT Clamp up close pressure ok",
+              "address": "DB244.X106.0"
+            },
+            {
+              "name": "PCT Clamp up ActCloseForce",
+              "address": "DB244.R108"
+            },
+            {
+              "name": "PCT Clamp up ActCloseForce ok",
+              "address": "DB244.X112.0"
+            },
+            {
+              "name": "PCT Clamp up open pressure ok",
+              "address": "DB244.X112.1"
+            },
+            {
+              "name": "PCT Clamp low-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT",
+              "address": "DB244.B122"
+            },
+            {
+              "name": "PCT Clamp low close pressure",
+              "address": "DB244.R124"
+            },
+            {
+              "name": "PCT Clamp low close pressure ok",
+              "address": "DB244.X128.0"
+            },
+            {
+              "name": "PCT Clamp low ActCloseForce",
+              "address": "DB244.R130"
+            },
+            {
+              "name": "PCT Clamp low ActCloseForce ok",
+              "address": "DB244.X134.0"
+            },
+            {
+              "name": "PCT Clamp low open pressure ok",
+              "address": "DB244.X134.1"
+            },
+            {
+              "name": "PCT Clamp Roatation-0=NONE, 1=NOT ALLIGNED, 2=ALLIGNED, 3=MAKE-UP, 4=BREAK-OUT, 5=FAULT",
+              "address": "DB244.B144"
+            },
+            {
+              "name": "PCT Makeup Torque-daN*m",
+              "address": "DB244.R170"
+            },
+            {
+              "name": "PCT ClampLastMakeUpTorque-daN*m",
+              "address": "DB244.R176"
+            },
+            {
+              "name": "PCT Sequence-0=OFF, 1=MAKE-UP, 2=BREAK-OUT, 3=RESET, 4=FAULT",
+              "address": "DB244.B184"
+            }
+          ],
+          "tags": {
+            "equipment": "PCT"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "ACS status-0=UNKNONE, 1=ON, 2=OFF, 3=DISABLE ",
+              "address": "DB3591.B0"
+            },
+            {
+              "name": "ACS Actual Block Position",
+              "address": "DB174.R150"
+            },
+            {
+              "name": "ACS Crownsaver in mm",
+              "address": "DB65.R6"
+            },
+            {
+              "name": "ACS floorsaver in mm",
+              "address": "DB65.R12"
+            },
+            {
+              "name": "ACS Bottomsaver in mm",
+              "address": "DB65.R18"
+            },
+            {
+              "name": "ACS Calibration status--1=UNKNOWN, 1=SEQ IN PROGRESS, 2=NOT CALIBRATED, 3=CALIBRATED,10=MOVE UP TO CROWN, 10=MOVE UP TO CROWN, 11=MOVE DOWN TO TAG LOW ",
+              "address": "DB174.B94"
+            },
+            {
+              "name": "ACS UPPERTAG POSITION mm",
+              "address": "DB77.R68"
+            },
+            {
+              "name": "ACS Lowertag position in mm",
+              "address": "DB77.R72"
+            },
+            {
+              "name": "ACS Offset overall in mm",
+              "address": "DB3590.R58"
+            }
+          ],
+          "tags": {
+            "equipment": "ACS"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "CWK status-0= NOT IN PARK POSITION, 1=PARK POSITION ",
+              "address": "DB2780.B0"
+            },
+            {
+              "name": "CWK Indexer DX-1=UP, 2=DOWN, 3=FAULT",
+              "address": "DB2780.B14"
+            },
+            {
+              "name": "CWK Indexer SX-1=UP, 2=DOWN, 3=FAULT",
+              "address": "DB2780.B18"
+            },
+            {
+              "name": "CWK Kickers DX-1=EXTEND, 2=RETRACT, 3=FAULT",
+              "address": "DB2780.B22"
+            },
+            {
+              "name": "CWK Kickers SX-1=1=EXTEND, 2=RETRACT, 3=FAULT",
+              "address": "DB2780.B26"
+            },
+            {
+              "name": "CWK Skate-1=IDLE, 2=PARKING POSITION, 3=FWD CMD, 4=BWD CMD, 5=FAULT",
+              "address": "DB2780.B30"
+            },
+            {
+              "name": "CWK Slide-1=IDLE, 2=PARKING POSITION, 3=FWD CMD, 4=BWD CMD, 5=FAULT",
+              "address": "DB2780.B34"
+            },
+            {
+              "name": "CWK Carrier-1= STOP, 2=PARKING POSITION, 3= WORK POSITION, 4= LIFTING, 5=LOWERING, 6=FAULT",
+              "address": "DB2780.B42"
+            },
+            {
+              "name": "CWK Carrier angle",
+              "address": "DB2780.R44"
+            },
+            {
+              "name": "CWK Clamp-0=NONE, 1=OPENING, 2=CLOSING, 3=IS OPEN, 4=IS CLOSE, 5=FAULT",
+              "address": "DB2780.B52"
+            },
+            {
+              "name": "CWK Clamp close pressure",
+              "address": "DB2780.R54"
+            },
+            {
+              "name": "CWK Clamp close pressure OK",
+              "address": "DB2780.X58.0"
+            },
+            {
+              "name": "CWK Clamp Actcloseforce",
+              "address": "DB2780.R60"
+            },
+            {
+              "name": "CWK Clamp Actcloeforce ok",
+              "address": "DB2780.X64.0"
+            },
+            {
+              "name": "CWK sourcecmd-0 = UNKNOWN, 1 = DCC, 2 = RADIOCONTROL",
+              "address": "DB2780.B70"
+            }
+          ],
+          "tags": {
+            "equipment": "CWK"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "HTD status-0 = OFF, 1 = ON in IDLE, 2 = ON ",
+              "address": "DB436.B0"
+            },
+            {
+              "name": "HTD workmode-0 = Unknown, 1 = Drill, 2 = Spin, 3 = Torque",
+              "address": "DB436.B12"
+            },
+            {
+              "name": "HTD opmode-0 = Unknown, 1 = Dolly 2 = Link",
+              "address": "DB436.B26"
+            },
+            {
+              "name": "HTD Rotation Status-0 = Stand still, 1 = Rotation FWD, 2 = Rotation BWD, 3 = Neutral",
+              "address": "DB436.B26"
+            },
+            {
+              "name": "HTD rpm",
+              "address": "DB436.R46"
+            },
+            {
+              "name": "HTD rpm req",
+              "address": "DB436.R38"
+            },
+            {
+              "name": "HTD rpm command",
+              "address": "DB436.R42"
+            },
+            {
+              "name": "HTD Torque req",
+              "address": "DB436.R52"
+            },
+            {
+              "name": "HTD Torque command",
+              "address": "DB436.R56"
+            },
+            {
+              "name": "HTD TORQUE DaNm",
+              "address": "DB436.R60"
+            },
+            {
+              "name": "HTD Lube Status-0=OFF, 1=CMD RUN, 2=RUNNING, 3 = FAULT",
+              "address": "DB436.B126"
+            },
+            {
+              "name": "HTD Brake Status-0=Unknown, 1 = Closing, 2 = Closed, 3 = Opening, 4 = Open, 5 = Fault",
+              "address": "DB436.B130"
+            },
+            {
+              "name": "HTD Elevator Status-0= Uncknown, 1 = Opening, 2 = Closing, 3 = Open, 4 = Close, 5 = Fault",
+              "address": "DB436.B140"
+            },
+            {
+              "name": "HTD IBOP Status-0= Uncknown, 1 = Opening, 2 = Closing, 3 = Open, 4 = Close, 5 = Fault",
+              "address": "DB436.B150"
+            },
+            {
+              "name": "HTD Link rotation Status-0= Uncknown, 1 = Unlocking, 2 = Unlocked, 3 = Rot. Fwd, 4 = Rot. Bwd, 5 = Locking, 6 = Locked ,  7 = Fault",
+              "address": "DB436.B160"
+            },
+            {
+              "name": "HTD Link Tilt status-0 = None, 1 = Float ON, 2 = Vertical, 3 = Float OFF, 4 = Extend, 5 = Retract, 6 = Fault",
+              "address": "DB436.B178"
+            },
+            {
+              "name": "HTD Inclination angle in %",
+              "address": "DB436.R268"
+            },
+            {
+              "name": "HTD suspenssion Status-0=none, 1= in push, 2= in pull",
+              "address": "DB436.B212"
+            },
+            {
+              "name": "HTD Tilt status-1= Tilting IN, 2=Tilt IN, 3=Tilting OUT, 4=Tilt OUT, 5=Half Way, 6=Stand Still",
+              "address": "DB65.B244"
+            },
+            {
+              "name": "HTD Inclination status-1= Inclination IN in progress, 2=Inclination IN, 3=Inclination OUT in progress, 4=Inclinated OUT, 5=Half Way, 6=Stand Still, 7=Tilted In, 8=Tilted Out",
+              "address": "DB65.B266"
+            },
+            {
+              "name": "HTD GEAR status--2=UNKNOWN, -1=FAULT, 1=GEAR 1, 2=GEAR 2, 3=GEAR 3, 4=GEAR 4. 5= GEAR 1 REGENERATIVE, 6= GEAR 2 REGENERATIVE, 7=GEAR 3 REGENERATIVE, 8= GEAR 4 REGENERATIVE",
+              "address": "DB174.B172"
+            },
+            {
+              "name": "HTD vertical speed",
+              "address": "DB174.R160"
+            },
+            {
+              "name": "HTD working hours",
+              "address": "DB174.R190"
+            },
+            {
+              "name": "HTD working minutes",
+              "address": "DB174.R199"
+            }
+          ],
+          "tags": {
+            "equipment": "HTD"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "PDW CALIBARTION status-0=UNKNONE, 1=ON, 2=OFF, 3=DISABLE ",
+              "address": "DB3591.B0"
+            },
+            {
+              "name": "ACS Actual Block Position",
+              "address": "DB174.R150"
+            },
+            {
+              "name": "ACS Crownsaver in mm",
+              "address": "DB65.R6"
+            },
+            {
+              "name": "ACS floorsaver in mm",
+              "address": "DB65.R12"
+            },
+            {
+              "name": "ACS Bottomsaver in mm",
+              "address": "DB65.R18"
+            },
+            {
+              "name": "PDW ACT PRESSURE",
+              "address": "DB174.R222"
+            }
+          ],
+          "tags": {
+            "equipment": "PDW"
+          }
+        },
+        {
+          "name": "AHWR",
+          "fields": [
+            {
+              "name": "PCT 3D diag SC52A LOWCLAMP CLOSE PRESS TRANS ",
+              "address": "DB31140.R22"
+            },
+            {
+              "name": "PCT 3D diag SC52B LOWCLAMP OPEN PRESS TRANS ",
+              "address": "DB31140.R32"
+            },
+            {
+              "name": "PCT 3D diag Y50PA LOWCLAMP FORCE VALVE ",
+              "address": "DB31140.R48"
+            },
+            {
+              "name": "PCT 3D diag Y50A LOWCLAMP CLOSE COMMAND VALVE ",
+              "address": "DB31140.X40.0"
+            },
+            {
+              "name": "PCT 3D diag Y50B LOWCLAMP OPEN COMMAND VALVE ",
+              "address": "DB31140.X42.0"
+            },
+            {
+              "name": "PCT 3D diag SC53A UPPERCLAMP CLOSE PRESS TRANS ",
+              "address": "DB31140.R158"
+            },
+            {
+              "name": "PCT 3D diag SC53B UPPERCLAMP OPEN PRESS TRANS ",
+              "address": "DB31140.R168"
+            },
+            {
+              "name": "PCT 3D diag Y53PA UPPERCLAMP FORCE VALVE ",
+              "address": "DB31140.R184"
+            },
+            {
+              "name": "PCT 3D diag Y53A UPPERLAMP CLOSE COMMAND VALVE ",
+              "address": "DB31140.X176.0"
+            },
+            {
+              "name": "PCT 3D diag Y53B UPPERLAMP OPEN COMMAND VALVE ",
+              "address": "DB31140.X178.0"
+            },
+            {
+              "name": "PCT 3D diag SC54A CLAMPROT CW PRESS TRANS",
+              "address": "DB31140.R54"
+            },
+            {
+              "name": "PCT 3D diag SC54B CLAMPROT CCW PRESS TRANS",
+              "address": "DB31140.R64"
+            },
+            {
+              "name": "PCT 3D diag SC59 ROTATION CLAMP CYLINDER TRANS TRANS",
+              "address": "DB31140.R74"
+            },
+            {
+              "name": "PCT 3D diag Y54BP-1 ROTCLAMP BREAKOUT SPEED VALVE 1 CYLINDER",
+              "address": "DB31140.R134"
+            },
+            {
+              "name": "PCT 3D diag Y54BP-2 ROTCLAMP BREAKOUT SPEED VALVE 2 CYLINDER",
+              "address": "DB31140.R150"
+            },
+            {
+              "name": "PCT 3D diag Y54PA-1 ROTCLAMP MAKEUP TORQUE VALVE 1 CYLINDER",
+              "address": "DB31140.R94"
+            },
+            {
+              "name": "PCT 3D diag Y54PA-2 ROTCLAMP MAKEUP TORQUE VALVE 2 CYLINDER",
+              "address": "DB31140.R110"
+            },
+            {
+              "name": "PCT 3D diag Y54PB-1 ROTCLAMP BREAKOUT TORQUE VALVE 1 CYLINDER",
+              "address": "DB31140.R102"
+            },
+            {
+              "name": "PCT 3D diag Y54PB-2 ROTCLAMP BREAKOUT TORQUE VALVE 2 CYLINDER",
+              "address": "DB31140.R118"
+            },
+            {
+              "name": "PCT 3D diag Y54AP-1 ROTCLAMP MAKEUP SPEED VALVE 1 CYLINDER",
+              "address": "DB31140.R126"
+            },
+            {
+              "name": "PCT 3D diag Y54AP-2 ROTCLAMP MAKEUP SPEED VALVE 2 CYLINDER",
+              "address": "DB31140.R142"
+            },
+            {
+              "name": "PCT 3D diag SP56 CLAMPROT RIGHT CYLINDER NEUTRAL PRESS SWITCH",
+              "address": "DB31140.X82.0"
+            }
+          ],
+          "tags": {
+            "equipment": "PCT 3D DIAG"
+          }
+        },
+        {
+          "name": "AHWR",
+          "tags": {
+            "equipment": "CAT ENG-1",
+            "db": "DB119",
+            "source": "DB119 engine1 engine2 HPU"
+          },
+          "fields": [
+            {
+              "name": "Engine 1 RunGroup1_StatusCode1",
+              "address": "DB119.B292",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_StatusCode2",
+              "address": "DB119.B294",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_SourceCmd",
+              "address": "DB119.B295",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_Hours",
+              "address": "DB119.DI300",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CMD_Start",
+              "address": "DB119.X310.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CMD_LSR",
+              "address": "DB119.X310.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CMD_HSR",
+              "address": "DB119.X310.2",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CMD_Idle-rpm",
+              "address": "DB119.X310.3",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_J1939ComOk",
+              "address": "DB119.X310.4",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_ProtectLamp",
+              "address": "DB119.X312.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AmberWarningLamp",
+              "address": "DB119.X312.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_RedStopLamp",
+              "address": "DB119.X312.2",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_RPM-rpm",
+              "address": "DB119.R314",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_TorquePercentage",
+              "address": "DB119.R318",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_TotalHoursOperation-hr",
+              "address": "DB119.R322",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_TotalFuelUsed",
+              "address": "DB119.DI326",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CoolantTemperature-degC",
+              "address": "DB119.R330",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_FuelTemperature-degC",
+              "address": "DB119.R334",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_FuelDeliveryPressure-bar",
+              "address": "DB119.R338",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_OilPressure-bar",
+              "address": "DB119.R342",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_CoolantLevelPercentage-%",
+              "address": "DB119.R346",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_FuelRate-L/h",
+              "address": "DB119.R350",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_ElectricalPotential",
+              "address": "DB119.R354",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_NextRegeneration",
+              "address": "DB119.R358",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_FluidTankTemp-degC",
+              "address": "DB119.R362",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_FluidTankLevel-%",
+              "address": "DB119.R366",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_DPFIntakeTemp-degC",
+              "address": "DB119.R370",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_DPFOutletTemp-degC",
+              "address": "DB119.R374",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_SCRIntakeTemp-degC",
+              "address": "DB119.R378",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_SCROutletTemp-degC",
+              "address": "DB119.R382",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_DPFLamp",
+              "address": "DB119.X386.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AT_HESTLamp",
+              "address": "DB119.X386.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_AcceleratorPedalPos",
+              "address": "DB119.R388",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_BPPilots-bar",
+              "address": "DB119.R392",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_BPPilotsOK-bar",
+              "address": "DB119.X396.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_EngineFb_StatusCode",
+              "address": "DB119.B398",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_EngineFb_ActPress-bar",
+              "address": "DB119.R400",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_EngineFb_ActPressOK-bar",
+              "address": "DB119.X404.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_StatusCode3",
+              "address": "DB119.B406",
+              "scale": 1
+            },
+            {
+              "name": "Engine 1 RunGroup1_StatusCode4",
+              "address": "DB119.B408",
+              "scale": 1
+            }
+          ]
+        },
+        {
+          "name": "AHWR",
+          "tags": {
+            "equipment": "CAT ENG-2",
+            "db": "DB119",
+            "source": "DB119 engine1 engine2 HPU"
+          },
+          "fields": [
+            {
+              "name": "Engine 2 RunGroup2_CMD_Start",
+              "address": "DB119.X424.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_CMD_LSR",
+              "address": "DB119.X424.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_CMD_HSR",
+              "address": "DB119.X424.2",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_CMD_Idle-rpm",
+              "address": "DB119.X424.3",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_J1939ComOk",
+              "address": "DB119.X424.4",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_ProtectLamp",
+              "address": "DB119.X426.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AmberWarningLamp",
+              "address": "DB119.X426.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_RedStopLamp",
+              "address": "DB119.X426.2",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_RPM-rpm",
+              "address": "DB119.R428",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_TorquePercentage",
+              "address": "DB119.R432",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_TotalHoursOperation-hr",
+              "address": "DB119.R436",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_TotalFuelUsed",
+              "address": "DB119.DI440",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_CoolantTemperature-degC",
+              "address": "DB119.R444",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_FuelTemperature-degC",
+              "address": "DB119.R448",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_FuelDeliveryPressure-bar",
+              "address": "DB119.R452",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_OilPressure-bar",
+              "address": "DB119.R456",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_CoolantLevelPercentage-%",
+              "address": "DB119.R460",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_FuelRate-L/h",
+              "address": "DB119.R464",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_ElectricalPotential",
+              "address": "DB119.R468",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_NextRegeneration",
+              "address": "DB119.R472",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_FluidTankTemp-degC",
+              "address": "DB119.R476",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_FluidTankLevel-%",
+              "address": "DB119.R480",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_DPFIntakeTemp-degC",
+              "address": "DB119.R484",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_DPFOutletTemp-degC",
+              "address": "DB119.R488",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_SCRIntakeTemp-degC",
+              "address": "DB119.R492",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_SCROutletTemp-degC",
+              "address": "DB119.R496",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_DPFLamp",
+              "address": "DB119.X500.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AT_HESTLamp",
+              "address": "DB119.X500.1",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_AcceleratorPedalPos",
+              "address": "DB119.R502",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_BPPilots-bar",
+              "address": "DB119.R506",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_BPPilotsOK-bar",
+              "address": "DB119.X510.0",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_StatusCode1",
+              "address": "DB119.B512",
+              "scale": 1
+            },
+            {
+              "name": "Engine 2 RunGroup2_StatusCode2",
+              "address": "DB119.B520",
+              "scale": 1
+            }
+          ]
+        },
+        {
+          "name": "AHWR",
+          "tags": {
+            "equipment": "HPU",
+            "db": "DB119",
+            "source": "DB119 engine1 engine2 HPU"
+          },
+          "fields": [
+            {
+              "name": "HPU StatusCode",
+              "address": "DB119.B0",
+              "scale": 1
+            },
+            {
+              "name": "HPU HOURS-hr",
+              "address": "DB119.DI6",
+              "scale": 1
+            },
+            {
+              "name": "HPU EStopOk",
+              "address": "DB119.X10.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPDischargeLine-bar",
+              "address": "DB119.R12",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPDischargeLineOk",
+              "address": "DB119.X16.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPAuxLine-bar",
+              "address": "DB119.R18",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPAuxLineOk",
+              "address": "DB119.X22.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPOilReturnLines-bar",
+              "address": "DB119.R24",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPOilReturnLinesOK",
+              "address": "DB119.X28.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPOilTest",
+              "address": "DB119.R30",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPOilTestOK",
+              "address": "DB119.X34.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSPipeRack-bar",
+              "address": "DB119.R36",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSPipeRackOK",
+              "address": "DB119.X40.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSBOPCart-bar",
+              "address": "DB119.R42",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSBOPCartOK",
+              "address": "DB119.X46.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPCatwalk-bar",
+              "address": "DB119.R48",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPCatwalkOK",
+              "address": "DB119.X52.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSRigUp-bar",
+              "address": "DB119.R54",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSRigUpOK",
+              "address": "DB119.X58.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSWalkways-bar",
+              "address": "DB119.R60",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSWalkwaysOK",
+              "address": "DB119.X64.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSDCCLifting-bar",
+              "address": "DB119.R66",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSDCCLiftingOK",
+              "address": "DB119.X70.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSAuxWinch-bar",
+              "address": "DB119.R72",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSAuxWinchOK",
+              "address": "DB119.X76.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSServices-bar",
+              "address": "DB119.R78",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPLSServicesOK",
+              "address": "DB119.X82.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPHagglundsFlushing-bar",
+              "address": "DB119.R84",
+              "scale": 1
+            },
+            {
+              "name": "HPU BPHagglundsFlushingOK",
+              "address": "DB119.X88.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_Ready",
+              "address": "DB119.X90.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_MotorOn",
+              "address": "DB119.X90.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_GroupFault",
+              "address": "DB119.X90.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_GroupWarning",
+              "address": "DB119.X90.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_Input1",
+              "address": "DB119.X90.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_Input2",
+              "address": "DB119.X90.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_Input3",
+              "address": "DB119.X90.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_InputLC",
+              "address": "DB119.X90.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_CurrMotorCurrent-%",
+              "address": "DB119.R92",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_ManLocalMode",
+              "address": "DB119.X96.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_ReadyStartMotorOn",
+              "address": "DB119.X96.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_MotorCW",
+              "address": "DB119.X96.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_MotorCCW",
+              "address": "DB119.X96.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_QuickStopActive",
+              "address": "DB119.X96.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_EnergySaveModeActive",
+              "address": "DB119.X96.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_DIModulePlugged",
+              "address": "DB119.X96.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_EXMotorProtection",
+              "address": "DB119.X96.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_ThermMotorModelOverload",
+              "address": "DB119.X97.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_CurrentLimitTripping",
+              "address": "DB119.X97.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_FDIActivated",
+              "address": "DB119.X97.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_ResidualCurrentDetected",
+              "address": "DB119.X97.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_AsymmetryDetected",
+              "address": "DB119.X97.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU M99_OverTemperature-degC",
+              "address": "DB119.X97.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilTest_StatusCode",
+              "address": "DB119.B98",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilQuality-%",
+              "address": "DB119.R104",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilQualityOK-%",
+              "address": "DB119.X110.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilRecoveryHPU1Front",
+              "address": "DB119.X112.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilRecoveryHPU1Back",
+              "address": "DB119.X112.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilRecoveryHPU2Front",
+              "address": "DB119.X112.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilRecoveryHPU2Back",
+              "address": "DB119.X112.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Mode_StatusCode",
+              "address": "DB119.B114",
+              "scale": 1
+            },
+            {
+              "name": "HPU ModeFdbk",
+              "address": "DB119.B118",
+              "scale": 1
+            },
+            {
+              "name": "HPU CmdFdbk",
+              "address": "DB119.B122",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilTemp_StatusCode-degC",
+              "address": "DB119.B124",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilTemp_ActTemp-degC",
+              "address": "DB119.R126",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilTemp_ActTempOK-degC",
+              "address": "DB119.X130.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU ST_OilHiHi-degC",
+              "address": "DB119.X130.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU ST_OilCouplerHiHi_HPU1-degC",
+              "address": "DB119.X130.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU ST_OilCouplerHiHi_HPU2-degC",
+              "address": "DB119.X130.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU SF_Esch1_ActOilFlow-%",
+              "address": "DB119.R132",
+              "scale": 1
+            },
+            {
+              "name": "HPU SF_Esch1_ActOilFlowOK-%",
+              "address": "DB119.X136.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU SF_Esch2_ActOilFlow-%",
+              "address": "DB119.R138",
+              "scale": 1
+            },
+            {
+              "name": "HPU SF_Esch2_ActOilFlowOK-%",
+              "address": "DB119.X142.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilFlow_StatusCode-%",
+              "address": "DB119.B144",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilLevel_StatusCode-%",
+              "address": "DB119.B270",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilLevel_ActLevel-%",
+              "address": "DB119.R272",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilLevel_ActLevelOK-%",
+              "address": "DB119.X276.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU OilLevel_SLLow-%",
+              "address": "DB119.X277.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU AuxiliaryPump_SH01",
+              "address": "DB119.X284.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU ServicePump_SH02",
+              "address": "DB119.X284.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU PullDownPump1_SH03",
+              "address": "DB119.X284.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU PullDownPump2_SH04",
+              "address": "DB119.X284.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU TopDrivePump1_SH05",
+              "address": "DB119.X284.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU TopDrivePump2_SH06",
+              "address": "DB119.X284.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU T67EBDS_SH07",
+              "address": "DB119.X284.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU VentDS_SH15",
+              "address": "DB119.X284.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU VentODS_SH16",
+              "address": "DB119.X285.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU AuxiliaryPump_SH08",
+              "address": "DB119.X286.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU ServicePump_SH09",
+              "address": "DB119.X286.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU PullDownPump1_SH10",
+              "address": "DB119.X286.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU PullDownPump2_SH11",
+              "address": "DB119.X286.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU TopDrivePump1_SH12",
+              "address": "DB119.X286.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU TopDrivePump2_SH13",
+              "address": "DB119.X286.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU T67EBDS_SH14",
+              "address": "DB119.X286.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU VentDS_SH17",
+              "address": "DB119.X286.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU VentODS_SH18",
+              "address": "DB119.X287.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling1_HotOil",
+              "address": "DB119.X288.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling1_ColdOil",
+              "address": "DB119.X288.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling1_HotH2O",
+              "address": "DB119.X288.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling1_ColdH2O",
+              "address": "DB119.X288.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling CoolingFan_StatusCode",
+              "address": "DB119.B154",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_Ready",
+              "address": "DB119.X164.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_MotorOn",
+              "address": "DB119.X164.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_GroupFault",
+              "address": "DB119.X164.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_GroupWarning",
+              "address": "DB119.X164.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_Input1",
+              "address": "DB119.X164.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_Input2",
+              "address": "DB119.X164.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_Input3",
+              "address": "DB119.X164.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_InputLC",
+              "address": "DB119.X164.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_CurrMotorCurrent",
+              "address": "DB119.R166",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_ManLocalMode",
+              "address": "DB119.X170.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_ReadyStartMotorOn",
+              "address": "DB119.X170.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_MotorCW",
+              "address": "DB119.X170.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_MotorCCW",
+              "address": "DB119.X170.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_QuickStopActive",
+              "address": "DB119.X170.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_EnergySaveModeActive",
+              "address": "DB119.X170.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_DIModulePlugged",
+              "address": "DB119.X170.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_EXMotorProtection",
+              "address": "DB119.X170.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_ThermMotorModelOverload",
+              "address": "DB119.X171.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_CurrentLimitTripping",
+              "address": "DB119.X171.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_FDIActivated",
+              "address": "DB119.X171.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_ResidualCurrentDetected",
+              "address": "DB119.X171.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_AsymmetryDetected",
+              "address": "DB119.X171.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan1_OverTemperature-degC",
+              "address": "DB119.X171.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_Ready",
+              "address": "DB119.X172.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_MotorOn",
+              "address": "DB119.X172.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_GroupFault",
+              "address": "DB119.X172.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_GroupWarning",
+              "address": "DB119.X172.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_Input1",
+              "address": "DB119.X172.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_Input2",
+              "address": "DB119.X172.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_Input3",
+              "address": "DB119.X172.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_InputLC",
+              "address": "DB119.X172.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_CurrMotorCurrent",
+              "address": "DB119.R174",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_ManLocalMode",
+              "address": "DB119.X178.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_ReadyStartMotorOn",
+              "address": "DB119.X178.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_MotorCW",
+              "address": "DB119.X178.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_MotorCCW",
+              "address": "DB119.X178.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_QuickStopActive",
+              "address": "DB119.X178.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_EnergySaveModeActive",
+              "address": "DB119.X178.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_DIModulePlugged",
+              "address": "DB119.X178.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_EXMotorProtection",
+              "address": "DB119.X178.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_ThermMotorModelOverload",
+              "address": "DB119.X179.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_CurrentLimitTripping",
+              "address": "DB119.X179.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_FDIActivated",
+              "address": "DB119.X179.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_ResidualCurrentDetected",
+              "address": "DB119.X179.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_AsymmetryDetected",
+              "address": "DB119.X179.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan2_OverTemperature-degC",
+              "address": "DB119.X179.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_Ready",
+              "address": "DB119.X180.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_MotorOn",
+              "address": "DB119.X180.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_GroupFault",
+              "address": "DB119.X180.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_GroupWarning",
+              "address": "DB119.X180.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_Input1",
+              "address": "DB119.X180.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_Input2",
+              "address": "DB119.X180.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_Input3",
+              "address": "DB119.X180.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_InputLC",
+              "address": "DB119.X180.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_CurrMotorCurrent",
+              "address": "DB119.R182",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_ManLocalMode",
+              "address": "DB119.X186.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_ReadyStartMotorOn",
+              "address": "DB119.X186.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_MotorCW",
+              "address": "DB119.X186.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_MotorCCW",
+              "address": "DB119.X186.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_QuickStopActive",
+              "address": "DB119.X186.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_EnergySaveModeActive",
+              "address": "DB119.X186.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_DIModulePlugged",
+              "address": "DB119.X186.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_EXMotorProtection",
+              "address": "DB119.X186.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_ThermMotorModelOverload",
+              "address": "DB119.X187.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_CurrentLimitTripping",
+              "address": "DB119.X187.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_FDIActivated",
+              "address": "DB119.X187.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_ResidualCurrentDetected",
+              "address": "DB119.X187.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_AsymmetryDetected",
+              "address": "DB119.X187.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan3_OverTemperature-degC",
+              "address": "DB119.X187.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_Ready",
+              "address": "DB119.X188.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_MotorOn",
+              "address": "DB119.X188.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_GroupFault",
+              "address": "DB119.X188.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_GroupWarning",
+              "address": "DB119.X188.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_Input1",
+              "address": "DB119.X188.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_Input2",
+              "address": "DB119.X188.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_Input3",
+              "address": "DB119.X188.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_InputLC",
+              "address": "DB119.X188.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_CurrMotorCurrent",
+              "address": "DB119.R190",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_ManLocalMode",
+              "address": "DB119.X194.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_ReadyStartMotorOn",
+              "address": "DB119.X194.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_MotorCW",
+              "address": "DB119.X194.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_MotorCCW",
+              "address": "DB119.X194.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_QuickStopActive",
+              "address": "DB119.X194.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_EnergySaveModeActive",
+              "address": "DB119.X194.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_DIModulePlugged",
+              "address": "DB119.X194.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_EXMotorProtection",
+              "address": "DB119.X194.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_ThermMotorModelOverload",
+              "address": "DB119.X195.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_CurrentLimitTripping",
+              "address": "DB119.X195.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_FDIActivated",
+              "address": "DB119.X195.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_ResidualCurrentDetected",
+              "address": "DB119.X195.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_AsymmetryDetected",
+              "address": "DB119.X195.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan4_OverTemperature-degC",
+              "address": "DB119.X195.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_Ready",
+              "address": "DB119.X196.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_MotorOn",
+              "address": "DB119.X196.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_GroupFault",
+              "address": "DB119.X196.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_GroupWarning",
+              "address": "DB119.X196.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_Input1",
+              "address": "DB119.X196.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_Input2",
+              "address": "DB119.X196.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_Input3",
+              "address": "DB119.X196.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan5_InputLC",
+              "address": "DB119.X196.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_Ready",
+              "address": "DB119.X204.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_MotorOn",
+              "address": "DB119.X204.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_GroupFault",
+              "address": "DB119.X204.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_GroupWarning",
+              "address": "DB119.X204.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_Input1",
+              "address": "DB119.X204.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_Input2",
+              "address": "DB119.X204.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_Input3",
+              "address": "DB119.X204.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_InputLC",
+              "address": "DB119.X204.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_CurrMotorCurrent",
+              "address": "DB119.R206",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_ManLocalMode",
+              "address": "DB119.X210.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_ReadyStartMotorOn",
+              "address": "DB119.X210.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_MotorCW",
+              "address": "DB119.X210.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_MotorCCW",
+              "address": "DB119.X210.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_QuickStopActive",
+              "address": "DB119.X210.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_EnergySaveModeActive",
+              "address": "DB119.X210.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_DIModulePlugged",
+              "address": "DB119.X210.6",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_EXMotorProtection",
+              "address": "DB119.X210.7",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_ThermMotorModelOverload",
+              "address": "DB119.X211.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_CurrentLimitTripping",
+              "address": "DB119.X211.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_FDIActivated",
+              "address": "DB119.X211.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_ResidualCurrentDetected",
+              "address": "DB119.X211.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_AsymmetryDetected",
+              "address": "DB119.X211.4",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Fan6_OverTemperature-degC",
+              "address": "DB119.X211.5",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Cooling2_StatusCode",
+              "address": "DB119.B212",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Cooling2_HotOil",
+              "address": "DB119.X290.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Cooling2_ColdOil",
+              "address": "DB119.X290.1",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Cooling2_HotH2O",
+              "address": "DB119.X290.2",
+              "scale": 1
+            },
+            {
+              "name": "HPU Cooling Cooling2_ColdH2O",
+              "address": "DB119.X290.3",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_StatusCode",
+              "address": "DB119.B540",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Flow_SP-%",
+              "address": "DB119.R542",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Flow_PV-%",
+              "address": "DB119.R546",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Flow_PV_OK-%",
+              "address": "DB119.X550.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Press_SP-bar",
+              "address": "DB119.R552",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Press_PV-bar",
+              "address": "DB119.R556",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_Press_PV_OK-bar",
+              "address": "DB119.X560.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_WL_SP",
+              "address": "DB119.R562",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_1_WL_Enable",
+              "address": "DB119.X566.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_StatusCode",
+              "address": "DB119.B568",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Flow_SP-%",
+              "address": "DB119.R570",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Flow_PV-%",
+              "address": "DB119.R574",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Flow_PV_OK-%",
+              "address": "DB119.X578.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Press_SP-bar",
+              "address": "DB119.R580",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Press_PV-bar",
+              "address": "DB119.R584",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_Press_PV_OK-bar",
+              "address": "DB119.X588.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_WL_SP",
+              "address": "DB119.R590",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump1_2_WL_Enable",
+              "address": "DB119.X594.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_StatusCode",
+              "address": "DB119.B596",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Flow_SP-%",
+              "address": "DB119.R598",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Flow_PV-%",
+              "address": "DB119.R602",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Flow_PV_OK-%",
+              "address": "DB119.X606.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Press_SP-bar",
+              "address": "DB119.R608",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Press_PV-bar",
+              "address": "DB119.R612",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_Press_PV_OK-bar",
+              "address": "DB119.X616.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_WL_SP",
+              "address": "DB119.R618",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_1_WL_Enable",
+              "address": "DB119.X622.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_StatusCode",
+              "address": "DB119.B624",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Flow_SP-%",
+              "address": "DB119.R626",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Flow_PV-%",
+              "address": "DB119.R630",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Flow_PV_OK-%",
+              "address": "DB119.X634.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Press_SP-bar",
+              "address": "DB119.R636",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Press_PV-bar",
+              "address": "DB119.R640",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_Press_PV_OK-bar",
+              "address": "DB119.X644.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_WL_SP",
+              "address": "DB119.R646",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump PDW_Pump2_2_WL_Enable",
+              "address": "DB119.X650.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_StatusCode",
+              "address": "DB119.B652",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Flow_SP-%",
+              "address": "DB119.R654",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Flow_PV-%",
+              "address": "DB119.R658",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Flow_PV_OK-%",
+              "address": "DB119.X662.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Press_SP-bar",
+              "address": "DB119.R664",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Press_PV-bar",
+              "address": "DB119.R668",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_Press_PV_OK-bar",
+              "address": "DB119.X672.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_WL_SP",
+              "address": "DB119.R674",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_1_WL_Enable",
+              "address": "DB119.X678.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_StatusCode",
+              "address": "DB119.B680",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Flow_SP-%",
+              "address": "DB119.R682",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Flow_PV-%",
+              "address": "DB119.R686",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Flow_PV_OK-%",
+              "address": "DB119.X690.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Press_SP-bar",
+              "address": "DB119.R692",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Press_PV-bar",
+              "address": "DB119.R696",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_Press_PV_OK-bar",
+              "address": "DB119.X700.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_WL_SP",
+              "address": "DB119.R702",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump1_2_WL_Enable",
+              "address": "DB119.X706.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_StatusCode",
+              "address": "DB119.B708",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Flow_SP-%",
+              "address": "DB119.R710",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Flow_PV-%",
+              "address": "DB119.R714",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Flow_PV_OK-%",
+              "address": "DB119.X718.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Press_SP-bar",
+              "address": "DB119.R720",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Press_PV-bar",
+              "address": "DB119.R724",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_Press_PV_OK-bar",
+              "address": "DB119.X728.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_WL_SP",
+              "address": "DB119.R730",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_1_WL_Enable",
+              "address": "DB119.X734.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_StatusCode",
+              "address": "DB119.B736",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Flow_SP-%",
+              "address": "DB119.R738",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Flow_PV-%",
+              "address": "DB119.R742",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Flow_PV_OK-%",
+              "address": "DB119.X746.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Press_SP-bar",
+              "address": "DB119.R748",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Press_PV-bar",
+              "address": "DB119.R752",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_Press_PV_OK-bar",
+              "address": "DB119.X756.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_WL_SP",
+              "address": "DB119.R758",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump HTD_Pump2_2_WL_Enable",
+              "address": "DB119.X762.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_StatusCode",
+              "address": "DB119.B764",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Flow_SP-%",
+              "address": "DB119.R766",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Flow_PV-%",
+              "address": "DB119.R770",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Flow_PV_OK-%",
+              "address": "DB119.X774.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Press_SP-bar",
+              "address": "DB119.R776",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Press_PV-bar",
+              "address": "DB119.R780",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_Press_PV_OK-bar",
+              "address": "DB119.X784.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_WL_SP",
+              "address": "DB119.R786",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump1_WL_Enable",
+              "address": "DB119.X790.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_StatusCode",
+              "address": "DB119.B792",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Flow_SP-%",
+              "address": "DB119.R794",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Flow_PV-%",
+              "address": "DB119.R798",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Flow_PV_OK-%",
+              "address": "DB119.X802.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Press_SP-bar",
+              "address": "DB119.R804",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Press_PV-bar",
+              "address": "DB119.R808",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_Press_PV_OK-bar",
+              "address": "DB119.X812.0",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_WL_SP",
+              "address": "DB119.R814",
+              "scale": 1
+            },
+            {
+              "name": "HPU Pump SRV_Pump2_WL_Enable",
+              "address": "DB119.X818.0",
+              "scale": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

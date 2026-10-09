@@ -1,0 +1,10 @@
+[
+  {
+    "id": "replace-with-generated-id",
+    "username": "admin",
+    "password": "REPLACE_WITH_BCRYPT_HASH_OR_CREATE_IN_ADMIN_UI",
+    "role": "admin",
+    "status": "active"
+  }
+]
+

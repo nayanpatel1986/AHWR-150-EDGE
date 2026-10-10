@@ -17,6 +17,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "ldapts": "^8.1.8",
+    "pg": "^8.13.1",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2"
   },

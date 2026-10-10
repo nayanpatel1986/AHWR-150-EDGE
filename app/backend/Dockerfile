@@ -12,7 +12,10 @@ COPY backend/. .
 COPY shared /shared
 
 # Writable state directory, owned by the unprivileged 'node' user.
-RUN mkdir -p /data && chown -R node:node /data /app
+# Managed Telegraf PLC config (shared volume with the telegraf container). The
+# placeholder makes Docker copy the node ownership into a new named volume.
+COPY telegraf/telegraf.d/plc.conf /etc/telegraf/telegraf.d/plc.conf
+RUN mkdir -p /data && chown -R node:node /data /app /etc/telegraf/telegraf.d
 USER node
 ENV DATA_DIR=/data
 

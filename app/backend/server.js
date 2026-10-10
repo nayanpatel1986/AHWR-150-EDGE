@@ -6,7 +6,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
 const { Server } = require("socket.io");
-const { InfluxDB } = require('@influxdata/influxdb-client');
 const fs = require('fs');
 const path = require('path');
 const auth = require('./lib/auth');
@@ -28,6 +27,9 @@ const wells = require('./lib/wells');
 const wellArchive = require('./lib/wellArchive');
 const wellReport = require('./lib/wellReport');
 const centralMessages = require('./lib/centralMessages');
+const tsdb = require('./lib/tsdb');
+const telemetryMap = require('./lib/telemetryMap');
+const telegrafConfig = require('./lib/telegrafConfig');
 const edrCatalog = require('../shared/edrMetrics.json');
 
 const PORT = Number(process.env.PORT || 5000);
@@ -54,17 +56,12 @@ if (fs.existsSync(DEFAULTS_DIR)) {
 }
 // -----------------------------------
 
-const INFLUX_URL = process.env.INFLUX_URL || 'http://influxdb:8086';
-const INFLUX_TOKEN = process.env.INFLUX_TOKEN;
-const INFLUX_ORG = process.env.INFLUX_ORG || 'romii_org';
-const INFLUX_BUCKET = process.env.INFLUX_BUCKET || 'romii_bucket';
-const INFLUX_QUERY_TIMEOUT_MS = Number(process.env.INFLUX_QUERY_TIMEOUT_MS || 8000);
 const DATA_SOURCE = process.env.DATA_SOURCE || 'plc';
 const MAX_WELL_DEPTH = Number(process.env.MAX_WELL_DEPTH_M || 100000); // sanity clamp (m)
 const FRESH_MS = Number(process.env.DATA_FRESH_MS || 5000);          // data older than this = stale
 
-if (!INFLUX_TOKEN) {
-    console.error('FATAL: INFLUX_TOKEN env var is required (no hardcoded fallback). Refusing to start.');
+if (!process.env.PGPASSWORD) {
+    console.error('FATAL: PGPASSWORD (the ahwr_app database password) is required. Refusing to start.');
     process.exit(1);
 }
 
@@ -115,12 +112,9 @@ sync.start(io);
 etp.start(io);
 centralMessages.start(io);
 
-// InfluxDB Query Client
-const queryApi = new InfluxDB({
-    url: INFLUX_URL,
-    token: INFLUX_TOKEN,
-    timeout: INFLUX_QUERY_TIMEOUT_MS
-}).getQueryApi(INFLUX_ORG);
+// Rig identity in the historian = the CMF device id (sync config, else DEVICE_ID).
+const currentRigId = () => (sync.getStatus() && sync.getStatus().deviceId) || process.env.DEVICE_ID || 'AHWR-50-EDGE';
+wellArchive.configure({ getRigId: currentRigId });
 
 // --- Atomic JSON persistence (temp file + rename; off the hot loop) -------
 const { writeJsonFile } = require('./lib/persist');
@@ -170,25 +164,14 @@ app.get('/api/config/plc', auth.requireAuth, (req, res) => {
 });
 
 // POST: admin-only. Validates the payload (stops TOML/config injection),
-// regenerates the managed section of telegraf.conf, and lets Telegraf
-// hot-reload it via `--watch-config`. No Docker socket / restart involved.
+// rewrites the managed telegraf.d/plc.conf (PLC inputs + telemetry mapping),
+// and lets Telegraf hot-reload it via `--watch-config`. No restart involved.
 app.post('/api/config/plc', auth.requireAuth, auth.requireRole('admin'), async (req, res) => {
     try {
         const config = validate.validatePlcConfig(req.body);
+        telegrafConfig.buildManagedConfig(config, { rigId: currentRigId(), starPath: 'check.star' }); // fail before saving
         await saveModbusConfig(config);
-
-        const content = fs.readFileSync(CONFIG_PATH, 'utf8');
-        const startMarker = '# PLC_CONFIG_START';
-        const endMarker = '# PLC_CONFIG_END';
-        const startIndex = content.indexOf(startMarker);
-        const endIndex = content.indexOf(endMarker);
-        if (startIndex === -1 || endIndex === -1) {
-            throw new Error('Telegraf configuration file is missing PLC_CONFIG markers.');
-        }
-        const newSection = generateTelegrafConfig(config);
-        const before = content.substring(0, startIndex + startMarker.length);
-        const after = content.substring(endIndex);
-        fs.writeFileSync(CONFIG_PATH, `${before}\n${newSection}\n${after}`);
+        applyTelegrafConfig(config);
 
         res.json({ success: true, message: 'Configuration saved. Telegraf will hot-reload automatically.' });
     } catch (err) {
@@ -241,42 +224,6 @@ app.post('/api/config/bop', auth.requireAuth, auth.requireRole('admin'), async (
         res.status(status).json({ success: false, error: err.message });
     }
 });
-
-// --- Per-well tagging of the historian -------------------------------------
-// The active well (and rig) are written into Telegraf global tags so raw points
-// can be archived/exported by well without changing PLC acquisition.
-const WELL_TAGS_START = '# WELL_TAGS_START';
-const WELL_TAGS_END = '# WELL_TAGS_END';
-const safeTagValue = (value) => String(value || '').replace(/[^A-Za-z0-9 _.\-/]/g, '').trim().slice(0, 64);
-
-function applyWellTags() {
-    try {
-        if (!fs.existsSync(CONFIG_PATH)) return null;
-        const content = fs.readFileSync(CONFIG_PATH, 'utf8');
-        const startIndex = content.indexOf(WELL_TAGS_START);
-        const endIndex = content.indexOf(WELL_TAGS_END);
-        if (startIndex === -1 || endIndex === -1) return null;
-
-        const active = wells.getActiveWell();
-        const wellName = safeTagValue(active && active.name);
-        const rigName = safeTagValue((active && active.rig) || process.env.DEVICE_ID);
-        const lines = [
-            '  # Managed by the backend - rewritten when a well is started/completed.',
-            `  well = "${wellName || 'UNASSIGNED'}"`,
-        ];
-        if (rigName) lines.push(`  rig = "${rigName}"`);
-
-        const next = `${content.substring(0, startIndex + WELL_TAGS_START.length)}\n${lines.join('\n')}\n${content.substring(endIndex)}`;
-        if (next !== content) {
-            fs.writeFileSync(CONFIG_PATH, next);
-            console.log(`Telegraf well tag set to "${wellName || 'UNASSIGNED'}" (hot-reload).`);
-        }
-        return wellName || null;
-    } catch (err) {
-        console.error('Failed to apply well tags to telegraf.conf:', err.message);
-        return null;
-    }
-}
 
 // Physics loop (runs on each data update). All weights are in tonnes-force
 // (consistent with the PLC "Weight on Hook -Ton" tag); depths are in metres.
@@ -382,61 +329,32 @@ app.post('/api/central-messages/:id/dismiss', auth.requireAuth, (req, res) => {
 
 // --- Main Socket & Data Loop ---
 
-// Telegraf config + device-config persistence paths.
-const CONFIG_PATH = process.env.TELEGRAF_CONFIG_PATH || path.join(DATA_DIR, 'telegraf', 'telegraf.conf');
+// Telegraf managed config (telegraf.d/plc.conf) + device-config persistence.
+const CONFIG_PATH = process.env.TELEGRAF_CONFIG_PATH || path.join(__dirname, '..', 'telegraf', 'telegraf.d', 'plc.conf');
 const DB_PATH = path.join(DATA_DIR, 'plc_config.json');
-
-// Stamp the current well onto the historian at boot, so restart cannot leave a stale tag.
-applyWellTags();
 
 const getModbusConfig = () => readJsonSync(DB_PATH, { slaves: [] });
 const saveModbusConfig = (config) => writeJsonAtomic(DB_PATH, config);
-const getS7ScaleMap = () => {
-    const scaleMap = new Map();
-    const config = getModbusConfig();
-    (config.slaves || []).forEach(slave => {
-        if ((slave.protocol || 'modbus') !== 's7comm') return;
-        (slave.metrics || []).forEach(metric => {
-            (metric.fields || []).forEach(field => {
-                const scale = field.scale === undefined || field.scale === null || field.scale === ''
-                    ? 1
-                    : Number(field.scale);
-                if (field.name && Number.isFinite(scale)) scaleMap.set(field.name, scale);
-            });
-        });
-    });
-    return scaleMap;
-};
-const applyS7Scale = (fieldName, value, scaleMap) => {
-    const scale = scaleMap.get(fieldName);
-    const numericValue = Number(value);
-    if (scale === undefined || scale === 1 || !Number.isFinite(scale) || !Number.isFinite(numericValue)) {
-        return value;
+
+// PLC tag -> CMF metric mapping. Telegraf applies it when writing; the live view
+// uses it to turn PLC-bit metrics (stored as 1/0) back into booleans.
+let tagMapping = telemetryMap.buildMapping(getModbusConfig());
+
+// Rewrite telegraf.d/plc.conf for a PLC config (Telegraf hot-reloads it).
+function applyTelegrafConfig(config = getModbusConfig()) {
+    tagMapping = telemetryMap.buildMapping(config);
+    if (telegrafConfig.writeManagedConfig(CONFIG_PATH, config, { rigId: currentRigId(), scriptPath: process.env.TELEGRAF_SCRIPT_PATH })) {
+        console.log(`Telegraf PLC config written to ${CONFIG_PATH} (Telegraf hot-reloads it).`);
     }
-    return numericValue * scale;
-};
+}
 
-// Map Modbus fields to application categories
-// Map S7 field names to application categories
-const { FIELD_MAP, getFieldMapping } = require('./lib/fieldmap');
+const { FIELD_MAP } = require('./lib/fieldmap');
 
-// Measurements polled for the live view (S7comm writes under "AHWR";
-// app-level measurements support mock/Modbus sources). Shared with /api/history.
-const LIVE_MEASUREMENTS = ['drawworks', 'engine', 'mudpump', 'wellcontrol', 'bop', 'wellhead', 'safety', 'opcua_demo', 'modbus', 'AHWR', 'fluid', 'drilling', 'hpu', 'htd', 'acs', 'cat_engine', 'cat_engine_2', 'cwk', 'pct'];
-
+// Metrics the history API serves: the EDR catalog plus every mapped PLC metric.
 const HISTORY_METRICS = new Set(edrCatalog.categories.flatMap(category =>
     category.fields.map(field => `${category.id}.${field.id}`)
 ));
-
-const RAW_FIELDS_BY_METRIC = new Map();
-Object.entries(FIELD_MAP).forEach(([rawField, mapped]) => {
-    const metric = `${mapped.meas}.${mapped.field}`;
-    HISTORY_METRICS.add(metric);
-    if (!RAW_FIELDS_BY_METRIC.has(metric)) RAW_FIELDS_BY_METRIC.set(metric, []);
-    RAW_FIELDS_BY_METRIC.get(metric).push(rawField);
-});
-
-const fluxString = (value) => JSON.stringify(String(value));
+Object.values(FIELD_MAP).forEach((mapped) => HISTORY_METRICS.add(`${mapped.meas}.${mapped.field}`));
 
 const getFluxDurationMs = (range) => {
     const match = /^-(\d+)(ns|us|ms|s|m|h|d|w|mo|y)$/.exec(range || '');
@@ -487,36 +405,6 @@ const getHistoryCacheTtl = (durationMs) => {
 const historyResponseCache = new Map();
 const historyInflight = new Map();
 
-// Extract unique measurements needed for the requested metrics so the Flux
-// query can narrow the measurement filter (instead of scanning all 17).
-const getNeededMeasurements = (metrics) => {
-    if (!metrics.length) return null;
-    const needed = new Set();
-    metrics.forEach(metric => {
-        const separator = metric.indexOf('.');
-        const measurement = metric.slice(0, separator);
-        needed.add(measurement);
-        // Also include AHWR in case raw S7 fields live there.
-        (RAW_FIELDS_BY_METRIC.get(metric) || []).forEach(() => needed.add('AHWR'));
-    });
-    return needed.size > 0 ? needed : null;
-};
-
-const buildHistoryMetricFilter = (metrics) => {
-    if (metrics.length === 0) return '';
-    const selectors = new Set();
-    metrics.forEach(metric => {
-        const separator = metric.indexOf('.');
-        const measurement = metric.slice(0, separator);
-        const field = metric.slice(separator + 1);
-        selectors.add(`(r["_measurement"] == ${fluxString(measurement)} and r["_field"] == ${fluxString(field)})`);
-        (RAW_FIELDS_BY_METRIC.get(metric) || []).forEach(rawField => {
-            selectors.add(`(r["_measurement"] == "AHWR" and r["_field"] == ${fluxString(rawField)})`);
-        });
-    });
-    return `|> filter(fn: (r) => ${Array.from(selectors).join(' or ')})`;
-};
-
 const buildHistoryCacheKey = ({ range, start, stop, metrics, windowPeriod }) => JSON.stringify({
     range: range || null,
     start: start || null,
@@ -527,36 +415,59 @@ const buildHistoryCacheKey = ({ range, start, stop, metrics, windowPeriod }) => 
 
 let lastDataAt = 0; // epoch ms of the last tick that returned sensor data
 
-const queryData = async () => {
-    const measurementFilter = LIVE_MEASUREMENTS.map(m => `r["_measurement"] == "${m}"`).join(' or ');
-    const s7ScaleMap = getS7ScaleMap();
-    const fluxQuery = `
-    from(bucket: "${INFLUX_BUCKET}")
-      |> range(start: -10s)
-      |> filter(fn: (r) => ${measurementFilter})
-      |> last()
-  `;
+// Metrics the backend derives itself (depth from the block encoder, WOB from the
+// hook-load tare). Stored in telemetry only when the PLC does not supply them.
+const DERIVED_METRICS = ['drilling.wob', 'drilling.bit_depth', 'drilling.hole_depth'];
+let lastDerivedWriteError = 0;
 
+function recordDerived(data, nowMs, fromHistorian) {
+    const ts = new Date(nowMs).toISOString();
+    const rows = [];
+    for (const metric of DERIVED_METRICS) {
+        if (fromHistorian.has(metric)) continue;
+        const [meas, f] = metric.split('.');
+        const value = Number(data[meas] && data[meas][f]);
+        if (Number.isFinite(value)) rows.push({ ts, metric, value });
+    }
+    if (!rows.length) return;
+    tsdb.insertTelemetry(currentRigId(), rows).catch((err) => {
+        if (Date.now() - lastDerivedWriteError > 60000) {
+            lastDerivedWriteError = Date.now();
+            console.error('Derived telemetry write failed:', err.message);
+        }
+    });
+}
+
+// Every event queued for the CMF is also kept locally in the CMF events table
+// (connections additionally in connections), whether or not sync is enabled.
+function recordEvent(type, payload, nowMs = Date.now()) {
+    sync.enqueueEvent(type, payload, nowMs);
+    tsdb.insertEvent(currentRigId(), new Date(nowMs).toISOString(), type, payload)
+        .catch((err) => console.error(`Event write failed (${type}):`, err.message));
+}
+
+const queryData = async () => {
     try {
+        // Latest sample of every metric for this rig over the last 10 s.
+        const { rows } = await tsdb.query(
+            `SELECT DISTINCT ON (metric) metric, value, ts
+             FROM telemetry
+             WHERE rig_id = $1 AND ts > now() - interval '10 seconds'
+             ORDER BY metric, ts DESC`,
+            [currentRigId()]);
         const data = {};
-        await new Promise((resolve, reject) => {
-            queryApi.queryRows(fluxQuery, {
-                next(row, tableMeta) {
-                    const o = tableMeta.toObject(row);
-                    let meas = o._measurement;
-                    let f = o._field;
-                    const value = applyS7Scale(f, o._value, s7ScaleMap);
-                    const fieldMapping = getFieldMapping(f);
-                    if (fieldMapping) { meas = fieldMapping.meas; f = fieldMapping.field; }
-                    if (!data[meas]) data[meas] = {};
-                    data[meas][f] = value;
-                    if (!data._fieldTimes) data._fieldTimes = {};
-                    data._fieldTimes[`${meas}.${f}`] = o._time;
-                },
-                error(error) { reject(error); },
-                complete() { resolve(); },
-            });
-        });
+        const fromHistorian = new Set();
+        for (const row of rows) {
+            const dot = row.metric.indexOf('.');
+            if (dot <= 0) continue;
+            const meas = row.metric.slice(0, dot);
+            const f = row.metric.slice(dot + 1);
+            if (!data[meas]) data[meas] = {};
+            data[meas][f] = telemetryMap.isBooleanMetric(tagMapping, row.metric) ? row.value !== 0 : row.value;
+            if (!data._fieldTimes) data._fieldTimes = {};
+            data._fieldTimes[row.metric] = new Date(row.ts).toISOString();
+            fromHistorian.add(row.metric);
+        }
 
         const hasBopData = !!(data.bop && Object.keys(data.bop).length > 0);
         const hasRigSensorData = !!(data.drawworks || data.engine || data.mudpump || data.drilling || data.AHWR || data.hpu || data.cat_engine || data.cat_engine_2);
@@ -589,6 +500,9 @@ const queryData = async () => {
                 hole_depth: physicsData.hole_depth,
                 wob: Number.isFinite(plcWob) ? plcWob : physicsData.wob
             };
+            // Keep the historian complete: derived depth/WOB are stored when the
+            // PLC does not supply them (never while the feed is stale).
+            if (!stale) recordDerived(data, now, fromHistorian);
         } else if (!hasBopData) {
             // No live feed: do NOT fabricate zeros or clear the UI during a
             // Telegraf reload/config save. Keep the last-good values visible and
@@ -704,8 +618,8 @@ const queryData = async () => {
                 data._efficiency = efficiency.update(data, now, { jointMade: !!tt.connectionMade });
                 // Store-and-forward: queue telemetry + events for sync to central
                 sync.enqueueTelemetry(data, now);
-                if (al.changed) sync.enqueueEvent('alarm', al.counts, now);
-                if (tt.connectionMade) sync.enqueueEvent('connection', tt.connectionMade, now);
+                if (al.changed) recordEvent('alarm', al.counts, now);
+                if (tt.connectionMade) recordEvent('connection', tt.connectionMade, now);
             } else {
                 data._activity = workover.getCurrent();
                 data._alarms = alarms.snapshot().counts;
@@ -770,8 +684,8 @@ const scheduleNextPoll = () => {
 app.get('/api/history', auth.requireAuth, async (req, res) => {
     const { range, start, stop, metrics } = req.query;
 
-    // Validate time inputs before they are interpolated into the Flux query
-    // (prevents Flux injection). Allow relative durations and RFC3339 instants only.
+    // Validate time inputs (relative durations and RFC3339 instants only). They
+    // reach the database as bind parameters.
     if (start !== undefined || stop !== undefined) {
         if (!validate.isFluxInstant(start) || !validate.isFluxInstant(stop)) {
             return res.status(400).json({ error: 'Invalid start/stop (use RFC3339 timestamps)' });
@@ -787,22 +701,16 @@ app.get('/api/history', auth.requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid history metrics' });
     }
 
-    // Build range filter
-    let rangeFilter = '';
     let durationMs;
-
     if (start && stop) {
-        rangeFilter = `|> range(start: ${start}, stop: ${stop})`;
         durationMs = new Date(stop).getTime() - new Date(start).getTime();
         if (!Number.isFinite(durationMs) || durationMs <= 0) {
             return res.status(400).json({ error: 'History stop time must be after start time' });
         }
     } else {
-        rangeFilter = `|> range(start: ${range || '-30s'})`;
         durationMs = getFluxDurationMs(range || '-30s');
     }
     const windowPeriod = getHistoryWindowPeriod(durationMs || 30 * 1000);
-    const metricFilter = buildHistoryMetricFilter(requestedMetrics);
     const cacheEligible = requestedMetrics.length > 0;
     const cacheKey = buildHistoryCacheKey({
         range,
@@ -814,27 +722,7 @@ app.get('/api/history', auth.requireAuth, async (req, res) => {
 
     // Determine if we need date in the time label
     const needsDate = range?.includes('24h') || range?.includes('d') || range?.includes('mo') || (start && stop);
-
-    // Narrow measurement filter to only the measurements that contain the
-    // requested metrics. Falls back to LIVE_MEASUREMENTS when no specific
-    // metrics are requested (rare — the frontend always sends them).
-    const neededMeas = getNeededMeasurements(requestedMetrics);
-    const activeMeasurements = neededMeas
-        ? LIVE_MEASUREMENTS.filter(m => neededMeas.has(m))
-        : LIVE_MEASUREMENTS;
-    const measurementFilter = activeMeasurements.map(m => `r["_measurement"] == "${m}"`).join(' or ');
-    const s7ScaleMap = getS7ScaleMap();
     const cacheTtl = getHistoryCacheTtl(durationMs || 30 * 1000);
-
-    const fluxQuery = `
-    from(bucket: "${INFLUX_BUCKET}")
-      ${rangeFilter}
-      |> filter(fn: (r) => ${measurementFilter})
-      ${metricFilter}
-      |> aggregateWindow(every: ${windowPeriod}, fn: last, createEmpty: false)
-      |> drop(columns: ["_start", "_stop"])
-      |> yield(name: "last")
-  `;
 
     try {
         if (cacheEligible) {
@@ -849,37 +737,31 @@ app.get('/api/history', auth.requireAuth, async (req, res) => {
         }
 
         const loadHistory = async () => {
-        const history = [];
-        await new Promise((resolve, reject) => {
-            queryApi.queryRows(fluxQuery, {
-                next(row, tableMeta) {
-                    const o = tableMeta.toObject(row);
-                    let meas = o._measurement;
-                    let f = o._field;
-                    const value = applyS7Scale(f, o._value, s7ScaleMap);
-
-                    const fieldMapping = getFieldMapping(f);
-                    if (fieldMapping) {
-                        meas = fieldMapping.meas;
-                        f = fieldMapping.field;
-                    }
-
-                    history.push({
-                        time: o._time,
-                        measurement: meas,
-                        field: f,
-                        value
-                    });
-                },
-                error(error) {
-                    console.error(error);
-                    reject(error);
-                },
-                complete() {
-                    resolve();
-                }
-            });
-        });
+        // Last value per window, stamped at the window end (as Flux aggregateWindow
+        // did). Windows of a minute or more read the 1-minute rollup, which also
+        // reaches back beyond the raw retention window.
+        const params = [currentRigId()];
+        const from = tsdb.timeBound(start && stop ? start : (range || '-30s'), params);
+        const to = start && stop ? tsdb.timeBound(stop, params) : 'now()';
+        params.push(tsdb.durationToInterval(windowPeriod));
+        const every = `$${params.length}::interval`;
+        let metricFilter = '';
+        if (requestedMetrics.length) {
+            params.push(requestedMetrics);
+            metricFilter = `AND metric = ANY($${params.length})`;
+        }
+        const useRollup = durationMs > 30 * 60 * 1000;
+        const sql = useRollup
+            ? `SELECT time_bucket(${every}, bucket) + ${every} AS t, metric, last(avg, bucket) AS v
+               FROM telemetry_1m_all
+               WHERE rig_id = $1 AND bucket >= ${from} AND bucket < ${to} ${metricFilter}
+               GROUP BY 1, 2 ORDER BY 1`
+            : `SELECT time_bucket(${every}, ts) + ${every} AS t, metric, last(value, ts) AS v
+               FROM telemetry
+               WHERE rig_id = $1 AND ts >= ${from} AND ts < ${to} ${metricFilter}
+               GROUP BY 1, 2 ORDER BY 1`;
+        const { rows: points } = await tsdb.query(sql, params);
+        const history = points.map((p) => ({ time: p.t, metric: p.metric, value: p.v }));
 
         // Group by timestamp for the chart
         const grouped = {};
@@ -895,7 +777,7 @@ app.get('/api/history', auth.requireAuth, async (req, res) => {
                 }
                 grouped[t] = { name: label, timestamp: t };
             }
-            grouped[t][`${pt.measurement}.${pt.field}`] = pt.value;
+            grouped[t][pt.metric] = pt.value;
         });
 
         // Sort by numeric timestamp (not string)
@@ -917,89 +799,6 @@ app.get('/api/history', auth.requireAuth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// Modbus Configuration API
-
-// Helper: Generate Telegraf TOML
-const generateTelegrafConfig = (config) => {
-    let toml = '';
-
-    // Slaves are now treated as "Devices" which can be Modbus or S7comm
-    config.slaves.forEach(slave => {
-        const protocol = slave.protocol || 'modbus';
-
-        if (protocol === 'modbus') {
-            toml += `[[inputs.modbus]]\n`;
-            toml += `  name = "${slave.name}"\n`;
-            toml += `  slave_id = ${slave.slaveId || 1}\n`;
-            toml += `  timeout = "1s"\n`;
-            toml += `  controller = "tcp://${slave.ip}:${slave.port || 502}"\n`;
-            toml += `  configuration_type = "register"\n`;
-            toml += `  optimization = "none"\n\n`;
-
-            // Discrete Inputs
-            const discretes = slave.registers.filter(r => r.type === 'discrete_input' && r.address !== null && r.address !== undefined && r.address !== "");
-            if (discretes.length > 0) {
-                toml += `  discrete_inputs = [\n`;
-                discretes.forEach(r => {
-                    toml += `    { name = "${r.name}", address = [${r.address}] },\n`;
-                });
-                toml += `  ]\n`;
-            }
-
-            // Coils
-            const coils = slave.registers.filter(r => r.type === 'coil' && r.address !== null && r.address !== undefined && r.address !== "");
-            if (coils.length > 0) {
-                toml += `  coils = [\n`;
-                coils.forEach(r => {
-                    toml += `    { name = "${r.name}", address = [${r.address}] },\n`;
-                });
-                toml += `  ]\n`;
-            }
-
-            // Holding Registers
-            const holding = slave.registers.filter(r => (r.type === 'holding_register' || r.type === 'input_register') && r.address !== null && r.address !== undefined && r.address !== "");
-            if (holding.length > 0) {
-                toml += `  holding_registers = [\n`;
-                holding.forEach(r => {
-                    let scaleVal = r.scale !== undefined && r.scale !== null && r.scale !== "" ? Number(r.scale) : 1.0;
-                    let scaleStr = Number.isInteger(scaleVal) ? scaleVal.toFixed(1) : String(scaleVal);
-                    const byteOrder = (r.dataType === 'INT16' || r.dataType === 'UINT16') ? 'AB' : 'ABCD';
-                    toml += `    { name = "${r.name}", byte_order = "${byteOrder}", data_type = "${r.dataType}", scale = ${scaleStr}, address = [${r.address}] },\n`;
-                });
-                toml += `  ]\n`;
-            }
-        } else if (protocol === 's7comm') {
-            // S7 input collection only. CMD-named fields are read-back values.
-            toml += '# RIG PLC: read-only S7 input collection, including CMD tag read-back.\n';
-            toml += `[[inputs.s7comm]]\n`;
-            toml += `  server = "${slave.ip}:${slave.port || 102}"\n`;
-            toml += `  rack = ${slave.rack || 0}\n`;
-            toml += `  slot = ${slave.slot || 0}\n`;
-
-            // S7comm uses metrics which group fields together
-            if (slave.metrics && slave.metrics.length > 0) {
-                slave.metrics.forEach(metric => {
-                    toml += `  [[inputs.s7comm.metric]]\n`;
-                    toml += `    name = "${metric.name || 'AHWR'}"\n`;
-                    toml += `    fields = [\n`;
-                    metric.fields.forEach(f => {
-                        toml += `      {name="${f.name}", address="${f.address}"},\n`;
-                    });
-                    toml += `    ]\n`;
-                    if (metric.tags) {
-                        toml += `    [inputs.s7comm.metric.tags]\n`;
-                        Object.entries(metric.tags).forEach(([k, v]) => {
-                            toml += `      ${k} = "${v}"\n`;
-                        });
-                    }
-                });
-            }
-        }
-        toml += `\n`;
-    });
-    return toml;
-};
 
 // Redundant endpoints removed (consolidated to /api/config/plc)
 
@@ -1537,14 +1336,15 @@ const sendArchive = (res, data, filename, format) => {
 // NOTE: /api/wells/archive/* must be registered before /api/wells/:id/export.
 app.get('/api/wells/archive/export', auth.requireAuth, async (req, res) => {
     try {
-        const bucket = await wellArchive.assertArchiveBucket(req.query.bucket);
-        const data = await wellArchive.queryWide(bucket, {
+        const archive = await wellArchive.assertArchiveBucket(req.query.bucket);
+        const data = await wellArchive.queryWide(archive, {
             metrics: req.query.metrics,
             start: req.query.start || '-100y',
             stop: req.query.stop || 'now()',
             every: req.query.every,
         });
-        sendArchive(res, { ...data, bucket }, bucket, req.query.format === 'json' ? 'json' : 'csv');
+        const filename = archive.kind === 'well' ? `${archive.well}_${archive.name}` : archive.name;
+        sendArchive(res, { ...data, bucket: archive.name }, filename.replace(/[^A-Za-z0-9_.\-]/g, '_'), req.query.format === 'json' ? 'json' : 'csv');
     } catch (e) {
         res.status(e.status || 500).json({ error: e.message });
     }
@@ -1557,8 +1357,8 @@ app.get('/api/wells/archive/describe', auth.requireAuth, async (req, res) => {
 
 app.get('/api/wells/archive/data', auth.requireAuth, async (req, res) => {
     try {
-        const bucket = await wellArchive.assertArchiveBucket(req.query.bucket);
-        res.json(await wellArchive.queryWide(bucket, {
+        const archive = await wellArchive.assertArchiveBucket(req.query.bucket);
+        res.json(await wellArchive.queryWide(archive, {
             metrics: req.query.metrics,
             start: req.query.start || '-100y',
             stop: req.query.stop || 'now()',
@@ -1583,7 +1383,7 @@ app.get('/api/wells/:id/export', auth.requireAuth, async (req, res) => {
             every: req.query.every,
         });
         const stamp = (data.from || '').slice(0, 10);
-        sendArchive(res, data, `${well.name}_${tier === 'raw' ? 'raw' : '1min'}_${stamp}`, format);
+        sendArchive(res, data, `${well.name}_${tier === 'raw' ? 'raw' : '1min'}_${stamp}`.replace(/[^A-Za-z0-9_.\-]/g, '_'), format);
     } catch (e) {
         res.status(e.status || 500).json({ error: e.message });
     }
@@ -1628,7 +1428,7 @@ app.post('/api/wells/import',
 app.post('/api/wells', auth.requireAuth, auth.requireRole('admin', 'operator'), (req, res) => {
     try {
         const well = wells.createWell(req.body || {}, req.user.username);
-        sync.enqueueEvent('well.created', { well, user: req.user.username });
+        recordEvent('well.created', { well, user: req.user.username });
         res.json({ success: true, well });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
@@ -1636,16 +1436,17 @@ app.post('/api/wells', auth.requireAuth, auth.requireRole('admin', 'operator'), 
 app.put('/api/wells/:id', auth.requireAuth, auth.requireRole('admin', 'operator'), (req, res) => {
     try {
         const well = wells.updateWell(req.params.id, req.body || {}, req.user.username);
-        sync.enqueueEvent('well.updated', { well, user: req.user.username });
+        wellArchive.updateWellInfo(well).catch((e) => console.error('well registry write failed:', e.message));
+        recordEvent('well.updated', { well, user: req.user.username });
         res.json({ success: true, well });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
 });
 app.delete('/api/wells/:id', auth.requireAuth, auth.requireRole('admin', 'operator'), (req, res) => {
     try {
+        // The well's recorded runs stay in the historian (well_runs / telemetry_1m).
         const well = wells.deleteWell(req.params.id);
-        if (well.status === 'active') applyWellTags();
-        sync.enqueueEvent('well.deleted', { well, user: req.user.username });
+        recordEvent('well.deleted', { well, user: req.user.username });
         res.json({ success: true, well });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
@@ -1653,10 +1454,8 @@ app.delete('/api/wells/:id', auth.requireAuth, auth.requireRole('admin', 'operat
 app.post('/api/wells/:id/start', auth.requireAuth, auth.requireRole('admin', 'operator'), (req, res) => {
     try {
         const well = wells.startWell(req.params.id, req.user.username);
-        applyWellTags();
-        wellArchive.ensureWellBucket(well.name)
-            .catch((e) => console.error('well archive bucket failed:', e.message));
-        sync.enqueueEvent('well.started', { well, user: req.user.username });
+        wellArchive.startRun(well).catch((e) => console.error('well run start failed:', e.message));
+        recordEvent('well.started', { well, user: req.user.username });
         res.json({ success: true, well });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
@@ -1664,10 +1463,8 @@ app.post('/api/wells/:id/start', auth.requireAuth, auth.requireRole('admin', 'op
 app.post('/api/wells/:id/complete', auth.requireAuth, auth.requireRole('admin', 'operator'), (req, res) => {
     try {
         const well = wells.completeWell(req.params.id, req.user.username);
-        applyWellTags();
-        wellArchive.finalize(well)
-            .catch((e) => console.error('well archive finalize failed:', e.message));
-        sync.enqueueEvent('well.completed', { well, user: req.user.username });
+        wellArchive.endRun(well).catch((e) => console.error('well run end failed:', e.message));
+        recordEvent('well.completed', { well, user: req.user.username });
         res.json({ success: true, well });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
@@ -1678,8 +1475,16 @@ app.get('/api/sync/status', auth.requireAuth, (req, res) => res.json(sync.getSta
 app.get('/api/sync/config', auth.requireAuth, (req, res) => res.json(sync.getConfig()));
 app.put('/api/sync/config', auth.requireAuth, auth.requireRole('admin'), async (req, res) => {
     try {
-        const config = await sync.setConfig(req.body || {});
+        const body = req.body || {};
+        // The device id is also the historian rig_id and a Telegraf tag value.
+        if (body.deviceId !== undefined) telegrafConfig.assertRigId(body.deviceId);
+        const before = currentRigId();
+        const config = await sync.setConfig(body);
         centralMessages.reconnectNow();
+        if (currentRigId() !== before) {
+            try { applyTelegrafConfig(); } catch (e) { console.error('Telegraf rig_id update failed:', e.message); }
+            tsdb.ensureRig(currentRigId()).catch((e) => console.error('rig registration failed:', e.message));
+        }
         res.json({ success: true, config });
     }
     catch (e) { res.status(e.status || 400).json({ error: e.message }); }
@@ -1895,31 +1700,48 @@ app.use((err, req, res, next) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`ROM-II backend listening on port ${PORT} (data source: ${DATA_SOURCE})`);
+    console.log(`ROM-II backend listening on port ${PORT} (data source: ${DATA_SOURCE}, rig ${currentRigId()})`);
+    historianStartup();
     queryData().finally(scheduleNextPoll);
 });
 
+// --- Historian start-up (TimescaleDB) ---------------------------------------
+// Keep the managed Telegraf config in step with plc_config.json and this
+// backend's mapping, register the rig, seed the tag dictionary and back-fill
+// runs for wells started before the database existed. Retries until the
+// database and schema are available (e.g. PostgreSQL still starting).
+const tagDictionary = () => {
+    const rows = new Map();
+    for (const category of edrCatalog.categories) {
+        for (const field of category.fields) {
+            rows.set(`${category.id}.${field.id}`, { metric: `${category.id}.${field.id}`, label: field.label, unit: field.unit || null, group: category.label });
+        }
+    }
+    for (const [raw, mapped] of Object.entries(FIELD_MAP)) {
+        const metric = `${mapped.meas}.${mapped.field}`;
+        if (!rows.has(metric)) rows.set(metric, { metric, label: raw, unit: null, group: mapped.meas });
+    }
+    return [...rows.values()];
+};
+let historianReady = false;
+const historianStartup = async () => {
+    if (historianReady || shuttingDown) return;
+    try { applyTelegrafConfig(); } catch (e) { console.error('Failed to write Telegraf PLC config:', e.message); }
+    if (!(await tsdb.checkSchema())) return;
+    try {
+        await tsdb.ensureRig(currentRigId());
+        await tsdb.upsertTags(tagDictionary());
+        const runs = await wellArchive.syncRegistry(wells.getWells());
+        historianReady = true;
+        console.log(`TimescaleDB historian ready (rig ${currentRigId()}, ${runs} well run(s) synced).`);
+    } catch (e) {
+        console.error('Historian start-up failed (will retry):', e.message);
+    }
+};
+const historianTimer = setInterval(() => { if (!historianReady) historianStartup(); }, 30000);
+
 // Periodically flush drilling state off the hot loop.
 const flushTimer = setInterval(flushDrillingState, Number(process.env.STATE_FLUSH_MS || 5000));
-
-// Roll the raw historian into the active well's permanent 1-minute archive.
-let archiveBusy = false;
-const archiveTimer = setInterval(async () => {
-    if (archiveBusy) return;
-    const active = wells.getActiveWell();
-    if (!active) return;
-    archiveBusy = true;
-    try {
-        const result = await wellArchive.archiveTick(active);
-        if (result && !result.skipped && result.points) {
-            console.log(`Well archive: ${result.points} pts -> ${result.bucket} (${result.from} .. ${result.to})`);
-        }
-    } catch (e) {
-        console.error('Well archive tick failed:', e.message);
-    } finally {
-        archiveBusy = false;
-    }
-}, Number(process.env.WELL_ARCHIVE_INTERVAL_MS || 60000));
 
 process.on('unhandledRejection', (reason) => console.error('Unhandled promise rejection:', reason));
 process.on('uncaughtException', (err) => console.error('Uncaught exception:', err));
@@ -1932,9 +1754,10 @@ const shutdown = async (signal) => {
     pollStopped = true;
     if (pollTimer) clearTimeout(pollTimer);
     clearInterval(flushTimer);
-    clearInterval(archiveTimer);
+    clearInterval(historianTimer);
     try { await flushDrillingState(); } catch (e) { /* best effort */ }
     io.close();
+    tsdb.close().catch(() => {});
     server.close(() => { console.log('HTTP server closed.'); process.exit(0); });
     setTimeout(() => process.exit(0), 5000).unref(); // hard cap
 };

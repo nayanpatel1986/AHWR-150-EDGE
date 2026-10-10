@@ -12,7 +12,6 @@ process.env.AUTH_MODE = 'ldap';
 process.env.LDAP_URL = 'ldap://dc.invalid';
 process.env.LDAP_ROLE_ADMIN = 'RigAdmins';
 process.env.LDAP_ROLE_OPERATOR = 'RigOperators';
-delete process.env.INFLUX_TOKEN;
 
 const persist = require('../lib/persist');
 const alarms = require('../lib/alarms');
@@ -53,7 +52,7 @@ test('persist: overlapping writes to one file stay valid JSON, land in order, le
   assert.deepEqual(fs.readdirSync(DATA_DIR).filter((f) => f.endsWith('.tmp')), []);
 });
 
-test('archive query window: only instants, durations and now() reach Flux', () => {
+test('archive query window: only instants, durations and now() reach the database', () => {
   assertQueryWindow({ start: '-100y', stop: 'now()' });
   assertQueryWindow({ start: '2026-01-01T00:00:00Z', stop: '2026-01-02T00:00:00.000Z', every: '1m' });
   for (const bad of [

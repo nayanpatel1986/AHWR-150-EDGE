@@ -1,0 +1,156 @@
+'use strict';
+// PLC tag -> CMF telemetry metric mapping.
+//
+// The historian stores the CMF's canonical long format: one row per
+// (ts, rig_id, metric, value) where metric is "measurement.field" using the
+// backend's mapped names (drawworks.hook_load, mudpump.pressure, ...). PLC tags
+// without a mapping keep their raw name under their Telegraf metric group
+// ("AHWR.<tag name>"), exactly as the live payload and the CMF sync name them.
+//
+// One mapping, three users:
+//   - Telegraf: a generated Starlark processor turns each S7/Modbus metric into
+//     telemetry rows as it writes them (so the database never holds raw names);
+//   - the backend live view: knows which metrics were PLC bits (booleans);
+//   - the InfluxDB -> TimescaleDB migration tool: maps legacy raw points.
+const crypto = require('crypto');
+const { FIELD_MAP, getFieldMapping } = require('./fieldmap');
+
+const FIELD_MAP_ORDER = new Map(Object.keys(FIELD_MAP).map((name, i) => [name, i]));
+const BIT_ADDRESS_RE = /\.X\d+\.\d+$/i;
+// BOP ram/annular limit switches arrive from the OPC UA collector as booleans.
+const BOP_BOOLEAN_RE = /^bop\.[a-z_]+_(open|close)$/;
+
+const scaleOf = (field) => {
+    const s = field.scale;
+    if (s === undefined || s === null || s === '') return 1;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 1;
+};
+
+// Every configured PLC field with the Telegraf metric group it is collected in.
+function configuredFields(plcConfig) {
+    const out = [];
+    for (const slave of (plcConfig && plcConfig.slaves) || []) {
+        const protocol = slave.protocol || 'modbus';
+        if (protocol === 's7comm') {
+            for (const metric of slave.metrics || []) {
+                for (const f of metric.fields || []) {
+                    out.push({ raw: f.name, group: metric.name || 'AHWR', scale: scaleOf(f), bit: BIT_ADDRESS_RE.test(String(f.address || '')) });
+                }
+            }
+        } else if (protocol === 'modbus') {
+            for (const r of slave.registers || []) {
+                // Modbus register scaling is applied by Telegraf itself.
+                out.push({ raw: r.name, group: slave.name || 'modbus', scale: 1, bit: r.type === 'coil' || r.type === 'discrete_input' });
+            }
+        }
+    }
+    return out;
+}
+
+/**
+ * Build the mapping for a PLC config.
+ * When several configured tags map to the same metric (e.g. primary and backup
+ * SPM), the one listed first in FIELD_MAP wins; the others are still stored,
+ * under their raw "group.tag" name, so nothing is lost.
+ * @returns {{ entries: Map<string,{metric:string,scale:number,bit:boolean}>, booleanMetrics: Set<string> }}
+ */
+function buildMapping(plcConfig) {
+    const fields = configuredFields(plcConfig);
+    const candidates = new Map(); // target metric -> [{ field, rank, order }]
+    fields.forEach((f, order) => {
+        const m = getFieldMapping(f.raw);
+        if (!m) return;
+        const target = `${m.meas}.${m.field}`;
+        const rank = FIELD_MAP_ORDER.has(f.raw) ? FIELD_MAP_ORDER.get(f.raw) : Number.MAX_SAFE_INTEGER;
+        if (!candidates.has(target)) candidates.set(target, []);
+        candidates.get(target).push({ f, rank, order });
+    });
+    const winners = new Map(); // raw name -> target
+    for (const [target, list] of candidates) {
+        list.sort((a, b) => (a.rank - b.rank) || (a.order - b.order));
+        winners.set(list[0].f.raw, target);
+    }
+
+    const entries = new Map();
+    const booleanMetrics = new Set();
+    for (const f of fields) {
+        if (entries.has(f.raw)) continue; // same tag name in two groups: first wins
+        const metric = winners.get(f.raw) || `${f.group}.${f.raw}`;
+        entries.set(f.raw, { metric, scale: f.scale, bit: f.bit });
+        if (f.bit) booleanMetrics.add(metric);
+    }
+    return { entries, booleanMetrics };
+}
+
+const isBooleanMetric = (mapping, metric) => mapping.booleanMetrics.has(metric) || BOP_BOOLEAN_RE.test(metric);
+
+// Map one legacy (InfluxDB) point the way Telegraf maps live ones.
+function mapPoint(mapping, measurement, field, value) {
+    const e = mapping.entries.get(field);
+    const metric = e ? e.metric : `${measurement}.${field}`;
+    let n;
+    if (typeof value === 'boolean') n = value ? 1 : 0;
+    else n = Number(value) * (e ? e.scale : 1);
+    if (value === null || value === '' || !Number.isFinite(n)) return null;
+    return { metric, value: n };
+}
+
+// Starlark string literal (JSON escaping is valid Starlark for these names).
+const starStr = (s) => JSON.stringify(String(s));
+
+/**
+ * Starlark source for Telegraf's processors.starlark. Turns every metric into
+ * single-value "telemetry" metrics tagged rig_id + metric, which the
+ * outputs.postgresql writes as (ts, rig_id, metric, value) rows.
+ */
+function starlarkSource(mapping) {
+    const lines = [...mapping.entries].map(([raw, e]) => `    ${starStr(raw)}: (${starStr(e.metric)}, ${Number(e.scale)}),`);
+    return [
+        '# GENERATED by the AHWR backend from plc_config.json. Do not edit by hand.',
+        '# Maps PLC tags to CMF telemetry metrics: one metric per field, tagged',
+        '# rig_id + metric, with booleans as 1/0 and the configured scale applied.',
+        'MAP = {',
+        ...lines,
+        '}',
+        '',
+        'def apply(metric):',
+        '    if metric.name.startswith("internal"):',
+        '        return metric',
+        '    rig = metric.tags.get("rig_id")',
+        '    if not rig:',
+        '        return metric',
+        '    out = []',
+        '    seen = {}',
+        '    for k, v in metric.fields.items():',
+        '        hit = MAP.get(k)',
+        '        if hit:',
+        '            name, scale = hit[0], hit[1]',
+        '        else:',
+        '            name, scale = metric.name + "." + k, 1.0',
+        '        if name in seen:',
+        '            continue',
+        '        t = type(v)',
+        '        if t == "bool":',
+        '            val = 1.0 if v else 0.0',
+        '        elif t == "int" or t == "float":',
+        '            val = float(v) * scale',
+        '        else:',
+        '            continue',
+        '        if val != val or val > 1e308 or val < -1e308:',
+        '            continue',
+        '        seen[name] = True',
+        '        row = Metric("telemetry")',
+        '        row.tags["rig_id"] = rig',
+        '        row.tags["metric"] = name',
+        '        row.fields["value"] = val',
+        '        row.time = metric.time',
+        '        out.append(row)',
+        '    return out',
+        '',
+    ].join('\n');
+}
+
+const hashOf = (text) => crypto.createHash('sha256').update(text).digest('hex').slice(0, 16);
+
+module.exports = { buildMapping, configuredFields, isBooleanMetric, mapPoint, starlarkSource, hashOf, BOP_BOOLEAN_RE };

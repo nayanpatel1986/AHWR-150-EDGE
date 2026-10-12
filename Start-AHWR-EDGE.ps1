@@ -101,6 +101,34 @@ function Test-Port([int]$Port) {
     } catch { return $false }
 }
 
+function Stop-LegacyAhwrServicesIfNeeded {
+    $legacyNames = @('AHWR-Dashboard', 'AHWR-InfluxDB', 'AHWR-Telegraf')
+    $legacy = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -in $legacyNames -and
+        $_.State -eq 'Running' -and
+        ([string]$_.PathName).IndexOf($Root, [StringComparison]::OrdinalIgnoreCase) -lt 0
+    })
+    if (-not $legacy.Count) { return }
+
+    Write-Host 'A legacy AHWR installation is occupying the required ports:' -ForegroundColor Yellow
+    $legacy | ForEach-Object { Write-Host "  $($_.Name): $($_.PathName)" -ForegroundColor Yellow }
+    Write-Host 'Windows Administrator approval is required once to stop these legacy services.' -ForegroundColor Cyan
+
+    $helper = Join-Path $Root 'Disable-Legacy-AHWR-Services.ps1'
+    if (-not (Test-Path -LiteralPath $helper)) { throw "Missing legacy-service cleanup helper: $helper" }
+    $args = @(
+        '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$helper`"", '-CurrentRoot', "`"$Root`""
+    )
+    try {
+        $elevated = Start-Process -FilePath 'powershell.exe' -ArgumentList $args -Verb RunAs -Wait -PassThru
+    } catch {
+        throw "Administrator approval was cancelled or failed. Stop the legacy AHWR services and try again. $($_.Exception.Message)"
+    }
+    if ($elevated.ExitCode -ne 0) { throw "Legacy AHWR service cleanup failed with exit code $($elevated.ExitCode)." }
+    Start-Sleep -Seconds 2
+}
+
 function Start-ManagedProcess([string]$Name, [string]$File, [string]$Arguments, [string]$WorkingDirectory) {
     $pidFile = Join-Path $RunDir "$Name.pid"
     if (Test-Path -LiteralPath $pidFile) {
@@ -132,6 +160,7 @@ function Assert-PortAvailableOrManaged([int]$Port, [string]$Name) {
     }
     throw "Port $Port is already in use by an unmanaged process. Stop that service and start AHWR-EDGE again."
 }
+Stop-LegacyAhwrServicesIfNeeded
 Assert-PortAvailableOrManaged 8086 'influxdb'
 Assert-PortAvailableOrManaged 8888 'telegraf'
 Assert-PortAvailableOrManaged 8080 'backend'

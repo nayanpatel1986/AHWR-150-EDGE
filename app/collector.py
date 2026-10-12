@@ -13,6 +13,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 log = logging.getLogger("versamax-bop")
+logging.getLogger("asyncua").setLevel(logging.WARNING)  # it logs every Read at INFO
 
 OPCUA_URL = os.getenv("KEPWARE_OPCUA_URL", "opc.tcp://host.docker.internal:49320")
 USERNAME = os.getenv("KEPWARE_OPCUA_USERNAME", "")
@@ -32,7 +33,7 @@ RECONNECT_MAX = float(os.getenv("BOP_RECONNECT_MAX_SECONDS", "60"))
 
 def load_config():
     try:
-        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        config = json.loads(CONFIG_PATH.read_text(encoding="utf-8-sig"))  # tolerate a BOM
     except (FileNotFoundError, json.JSONDecodeError) as exc:
         log.warning("BOP configuration unavailable: %s", exc)
         return {"enabled": False, "tags": []}
@@ -71,9 +72,9 @@ def configured_tags(config):
 
 
 def quality_name(status):
-    if status == ua.StatusCode(ua.StatusCodes.Good):
+    if status.is_good():
         return "good"
-    if status.is_uncertain:
+    if status.is_uncertain():
         return "uncertain"
     return "bad"
 
@@ -93,44 +94,47 @@ async def make_client(config):
     return client
 
 
-async def collect_once():
-    config = load_config()
-    if not config.get("enabled", True):
-        log.info("VersaMax BOP collector disabled in administration settings")
-        await asyncio.sleep(10)
-        return False
-
-    client = await make_client(config)
+def config_stamp():
     try:
-        await client.connect()
-        log.info("VersaMax OPC UA connected: %s", OPCUA_URL)
+        return CONFIG_PATH.stat().st_mtime_ns
+    except OSError:
+        return None
+
+
+async def run_session(config):
+    """One OPC UA session, kept open: read every configured node once a second
+    in a single Read request, until the session fails or bop_config.json
+    changes. Returns True when it should reconnect at once (config change)."""
+    stamp = config_stamp()
+    client = await make_client(config)
+    await client.connect()
+    log.info("VersaMax OPC UA connected: %s", OPCUA_URL)
+    try:
         tags = configured_tags(config)
         if not tags:
             log.warning("OPC UA connected, but no BOP Node IDs configured; enter confirmed Kepware Node IDs in Settings > Administration")
-            return True
-        nodes = [(tag, client.get_node(tag["nodeId"])) for tag in tags]
-        fields = {}
-        timestamp_ns = time.time_ns()
-        for tag, node in nodes:
-            try:
-                value = await node.read_value()
-                status = await node.read_data_value()
-                quality = quality_name(status.StatusCode)
-                if quality != "good":
-                    log.warning("VersaMax tag quality %s: %s", quality, tag["name"])
-                    continue
-                if isinstance(value, (bool, int, float)):
-                    fields[tag["field"]] = value
-                else:
-                    log.warning("VersaMax tag is not numeric/bool: %s", tag["name"])
-            except Exception as exc:
-                log.warning("VersaMax tag read failed: %s (%s)", tag["name"], exc)
-        if fields:
-            await asyncio.to_thread(write_line, line_protocol(fields, timestamp_ns))
-            log.debug("VersaMax data sent to Telegraf (%d tags)", len(fields))
-        else:
-            log.warning("VersaMax connected but no good BOP tag values were read")
-        return True
+        nodes = [client.get_node(tag["nodeId"]) for tag in tags]
+        while True:
+            if config_stamp() != stamp:
+                log.info("BOP configuration changed; reconnecting")
+                return True
+            if nodes:
+                data_values = await client.read_attributes(nodes)
+                fields = {}
+                for tag, dv in zip(tags, data_values):
+                    quality = quality_name(dv.StatusCode)
+                    value = dv.Value.Value if dv.Value is not None else None
+                    if quality != "good":
+                        log.warning("VersaMax tag quality %s: %s", quality, tag["name"])
+                    elif isinstance(value, (bool, int, float)):
+                        fields[tag["field"]] = value
+                    else:
+                        log.warning("VersaMax tag is not numeric/bool: %s", tag["name"])
+                if fields:
+                    await asyncio.to_thread(write_line, line_protocol(fields, time.time_ns()))
+            else:
+                await client.check_connection()
+            await asyncio.sleep(1)
     finally:
         try:
             await client.disconnect()
@@ -141,16 +145,20 @@ async def collect_once():
 async def main():
     backoff = RECONNECT_INITIAL
     while True:
+        config = load_config()
+        if not config.get("enabled", True):
+            log.info("VersaMax BOP collector disabled in administration settings")
+            await asyncio.sleep(10)
+            continue
         try:
-            connected = await collect_once()
-            backoff = RECONNECT_INITIAL if connected else min(backoff * 2, RECONNECT_MAX)
+            if await run_session(config):
+                backoff = RECONNECT_INITIAL
+                continue
         except Exception as exc:
-            log.error("VersaMax OPC UA disconnected: %s", exc)
-            log.info("VersaMax reconnecting in %.1f seconds...", backoff)
-            await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, RECONNECT_MAX)
-        else:
-            await asyncio.sleep(1)
+            log.error("VersaMax OPC UA session ended: %s", exc)
+        log.info("VersaMax reconnecting in %.1f seconds...", backoff)
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, RECONNECT_MAX)
 
 
 if __name__ == "__main__":

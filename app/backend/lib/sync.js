@@ -11,6 +11,7 @@ const http = require('http');
 const https = require('https');
 const { readJson, writeJson, DATA_DIR } = require('./persist');
 const wells = require('./wells');
+const transport = require('./transport');
 
 const SCHEMA_VERSION = '1.0';
 const CONFIG_FILE = 'sync_config.json';
@@ -184,6 +185,9 @@ function prune() {
 function postBatch(buf, seq) {
     return new Promise((resolve) => {
         let u; try { u = new URL('/ingest', config.centralUrl); } catch { return resolve({ ok: false, err: 'bad centralUrl' }); }
+        // The batch carries the device token: never send it unencrypted.
+        const insecure = transport.insecureReason(config.centralUrl, transport.HTTP);
+        if (insecure) return resolve({ ok: false, err: `central URL refused: ${insecure}` });
         const lib = u.protocol === 'https:' ? https : http;
         const headers = {
             'Content-Type': 'application/json', 'Content-Encoding': config.compression ? 'gzip' : 'identity',
@@ -340,6 +344,7 @@ function getStatus() {
 
 function getConfig() { const { deviceToken, ...safe } = config; return { ...safe, deviceTokenSet: !!deviceToken }; }
 async function setConfig(next) {
+    if (next && next.centralUrl) transport.assertSecure(next.centralUrl, transport.HTTP, 'Central URL');
     const allow = ['enabled', 'centralUrl', 'deviceId', 'deviceToken', 'batchSeconds', 'maxBufferDays', 'compression', 'flushBatchesPerCycle', 'flushIntervalMs', 'flushIntervalSec'];
     for (const k of allow) if (k in (next || {})) config[k] = next[k];
     config.batchSeconds = Math.max(1, Number(config.batchSeconds) || 10);

@@ -161,8 +161,12 @@ async function assertArchiveBucket(bucket) {
 
 // ---------------------------------------------------------------------------
 // Wide queries: [{ time, 'measurement.field': value, ... }]
+//
+// Data is read in time slices. The UI's archive view collects them (capped);
+// exports stream them to the response as they are read, with no row cap.
 // ---------------------------------------------------------------------------
 const SUFFIX_RE = /_(min|max)$/;
+const ROLLUP_SLICE_MS = 7 * 86400000;
 
 // Columns the caller asked for -> base metrics to read from the 1-minute tier.
 function splitArchiveMetrics(wanted) {
@@ -170,37 +174,21 @@ function splitArchiveMetrics(wanted) {
     for (const m of wanted) bases.add(SUFFIX_RE.test(m) ? m.replace(SUFFIX_RE, '') : m);
     return [...bases];
 }
+const wantedList = (metrics) => String(metrics || '').split(',').map((m) => m.trim()).filter(Boolean);
 
-function pivot(rows, keep, state) {
+// Pivot one slice's long rows into wide rows (slices never split a timestamp).
+function pivotSlice(rows, keep) {
+    const byTime = new Map();
     for (const r of rows) {
-        if (state.byTime.size >= MAX_EXPORT_ROWS && !state.byTime.has(r.time)) { state.truncated = true; continue; }
-        if (!state.byTime.has(r.time)) state.byTime.set(r.time, { time: r.time });
-        const row = state.byTime.get(r.time);
+        let row = byTime.get(r.time);
+        if (!row) { row = { time: r.time }; byTime.set(r.time, row); }
         for (const [col, value] of r.cols) {
-            if (keep && !keep.has(col)) continue;
             if (value === null || value === undefined) continue;
-            state.columns.add(col);
+            if (keep && !keep.has(col)) continue;
             row[col] = value;
         }
     }
-}
-
-const finish = (state) => ({
-    rows: [...state.byTime.values()].sort((a, b) => a.time.localeCompare(b.time)),
-    columns: [...state.columns].sort(),
-    truncated: state.truncated,
-});
-
-// Read [from, to) in slices so a long range never loads in one result set.
-async function sliced(fromIso, toIso, sliceMs, fn) {
-    let t = Date.parse(fromIso);
-    const end = Date.parse(toIso);
-    while (t < end) {
-        const next = Math.min(end, t + sliceMs);
-        const more = await fn(new Date(t).toISOString(), new Date(next).toISOString());
-        if (more === false) break;
-        t = next;
-    }
+    return [...byTime.values()];
 }
 
 // Resolve the API's start/stop (instants, durations, now()) to ISO instants.
@@ -217,76 +205,140 @@ async function resolveWindow(start, stop, clampFrom, clampTo) {
     return { from: new Date(from).toISOString(), to: new Date(to).toISOString() };
 }
 
-async function readRollup(rigId, from, to, { metrics, every }) {
-    const wanted = String(metrics || '').split(',').map((m) => m.trim()).filter(Boolean);
+/** A readable source: the column list and an async iterator of wide-row slices. */
+function rollupSource(rigId, from, to, { metrics, every }) {
+    const wanted = wantedList(metrics);
     const keep = wanted.length ? new Set(wanted) : null;
     const bases = wanted.length ? splitArchiveMetrics(wanted) : null;
     const interval = every ? tsdb.durationToInterval(every) : null;
-    const state = { byTime: new Map(), columns: new Set(), truncated: false };
-    await sliced(from, to, 7 * 86400000, async (a, b) => {
-        const params = [rigId, a, b];
-        let filter = '';
-        if (bases) { params.push(bases); filter = `AND metric = ANY($${params.length})`; }
-        let sql;
-        if (interval) {
-            params.push(interval);
-            sql = `SELECT time_bucket($${params.length}::interval, bucket) AS t, metric,
-                          avg(avg) AS avg, min(min) AS min, max(max) AS max
-                   FROM telemetry_1m_all
-                   WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 ${filter}
-                   GROUP BY 1, 2 ORDER BY 1`;
-        } else {
-            sql = `SELECT bucket AS t, metric, avg, min, max FROM telemetry_1m_all
-                   WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 ${filter} ORDER BY 1`;
-        }
-        const { rows } = await tsdb.query(sql, params);
-        pivot(rows.map((r) => ({
-            time: new Date(r.t).toISOString(),
-            cols: [[r.metric, r.avg], [`${r.metric}_min`, r.min], [`${r.metric}_max`, r.max]],
-        })), keep, state);
-        return !state.truncated;
-    });
-    return finish(state);
+    return {
+        async columns() {
+            const params = [rigId, from, to];
+            let filter = '';
+            if (bases) { params.push(bases); filter = `AND metric = ANY($${params.length})`; }
+            const { rows } = await tsdb.query(
+                `SELECT metric FROM telemetry_1m_all WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 ${filter}
+                 GROUP BY metric ORDER BY metric`, params);
+            const cols = rows.flatMap((r) => [r.metric, `${r.metric}_min`, `${r.metric}_max`]);
+            return (keep ? cols.filter((c) => keep.has(c)) : cols).sort();
+        },
+        async *slices() {
+            for (let t = Date.parse(from), end = Date.parse(to); t < end; t += ROLLUP_SLICE_MS) {
+                const a = new Date(t).toISOString();
+                const b = new Date(Math.min(end, t + ROLLUP_SLICE_MS)).toISOString();
+                const params = [rigId, a, b];
+                let filter = '';
+                if (bases) { params.push(bases); filter = `AND metric = ANY($${params.length})`; }
+                let sql;
+                if (interval) {
+                    params.push(interval);
+                    sql = `SELECT time_bucket($${params.length}::interval, bucket) AS t, metric,
+                                  avg(avg) AS avg, min(min) AS min, max(max) AS max
+                           FROM telemetry_1m_all
+                           WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 ${filter}
+                           GROUP BY 1, 2 ORDER BY 1`;
+                } else {
+                    sql = `SELECT bucket AS t, metric, avg, min, max FROM telemetry_1m_all
+                           WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 ${filter} ORDER BY 1`;
+                }
+                const { rows } = await tsdb.query(sql, params);
+                yield pivotSlice(rows.map((r) => ({
+                    time: new Date(r.t).toISOString(),
+                    cols: [[r.metric, r.avg], [`${r.metric}_min`, r.min], [`${r.metric}_max`, r.max]],
+                })), keep);
+            }
+        },
+    };
 }
 
-async function readValues(table, keyCol, keyVal, from, to, { metrics, every }) {
-    const wanted = String(metrics || '').split(',').map((m) => m.trim()).filter(Boolean);
+function valueSource(table, keyCol, keyVal, from, to, { metrics, every }) {
+    const wanted = wantedList(metrics);
     const interval = every ? tsdb.durationToInterval(every) : null;
-    const state = { byTime: new Map(), columns: new Set(), truncated: false };
-    await sliced(from, to, (interval ? 24 : 1) * 3600000, async (a, b) => {
-        const params = [keyVal, a, b];
-        let filter = '';
-        if (wanted.length) { params.push(wanted); filter = `AND metric = ANY($${params.length})`; }
-        let sql;
-        if (interval) {
-            params.push(interval);
-            sql = `SELECT time_bucket($${params.length}::interval, ts) AS t, metric, avg(value) AS v
-                   FROM ${table} WHERE ${keyCol} = $1 AND ts >= $2 AND ts < $3 ${filter}
-                   GROUP BY 1, 2 ORDER BY 1`;
-        } else {
-            sql = `SELECT ts AS t, metric, value AS v FROM ${table}
-                   WHERE ${keyCol} = $1 AND ts >= $2 AND ts < $3 ${filter} ORDER BY 1`;
-        }
-        const { rows } = await tsdb.query(sql, params);
-        pivot(rows.map((r) => ({ time: new Date(r.t).toISOString(), cols: [[r.metric, r.v]] })), null, state);
-        return !state.truncated;
-    });
-    return finish(state);
+    const sliceMs = (interval ? 24 : 1) * 3600000;
+    return {
+        async columns() {
+            if (wanted.length) return [...wanted].sort();
+            // Raw telemetry: the rollup holds the same metrics and is far cheaper to scan.
+            const { rows } = table === 'telemetry'
+                ? await tsdb.query(`SELECT metric FROM telemetry_1m_all WHERE rig_id = $1 AND bucket >= $2 AND bucket < $3 GROUP BY metric ORDER BY metric`,
+                    [keyVal, new Date(Math.floor(Date.parse(from) / 60000) * 60000).toISOString(), to])
+                : await tsdb.query(`SELECT metric FROM ${table} WHERE ${keyCol} = $1 AND ts >= $2 AND ts < $3 GROUP BY metric ORDER BY metric`, [keyVal, from, to]);
+            return rows.map((r) => r.metric);
+        },
+        async *slices() {
+            for (let t = Date.parse(from), end = Date.parse(to); t < end; t += sliceMs) {
+                const a = new Date(t).toISOString();
+                const b = new Date(Math.min(end, t + sliceMs)).toISOString();
+                const params = [keyVal, a, b];
+                let filter = '';
+                if (wanted.length) { params.push(wanted); filter = `AND metric = ANY($${params.length})`; }
+                let sql;
+                if (interval) {
+                    params.push(interval);
+                    sql = `SELECT time_bucket($${params.length}::interval, ts) AS t, metric, avg(value) AS v
+                           FROM ${table} WHERE ${keyCol} = $1 AND ts >= $2 AND ts < $3 ${filter}
+                           GROUP BY 1, 2 ORDER BY 1`;
+                } else {
+                    sql = `SELECT ts AS t, metric, value AS v FROM ${table}
+                           WHERE ${keyCol} = $1 AND ts >= $2 AND ts < $3 ${filter} ORDER BY 1`;
+                }
+                const { rows } = await tsdb.query(sql, params);
+                yield pivotSlice(rows.map((r) => ({ time: new Date(r.t).toISOString(), cols: [[r.metric, r.v]] })), null);
+            }
+        },
+    };
 }
 
-/** Wide rows for an archive (well run or import). */
-async function queryWide(archive, { metrics, start, stop, every } = {}) {
+// Collect a source into memory, capped (UI archive view).
+async function collect(source) {
+    const rows = [];
+    const columns = new Set();
+    let truncated = false;
+    for await (const slice of source.slices()) {
+        for (const row of slice) {
+            if (rows.length >= MAX_EXPORT_ROWS) { truncated = true; break; }
+            rows.push(row);
+            for (const k of Object.keys(row)) if (k !== 'time') columns.add(k);
+        }
+        if (truncated) break;
+    }
+    return { rows, columns: [...columns].sort(), truncated };
+}
+
+async function archiveSource(archive, { metrics, start, stop, every } = {}) {
     assertQueryWindow({ start, stop, every });
     if (archive.kind === 'import') {
         const { from, to } = await resolveWindow(start, stop, null, new Date('9999-01-01'));
-        return readValues('telemetry_import', 'import_label', archive.label, from, to, { metrics, every });
+        return { source: valueSource('telemetry_import', 'import_label', archive.label, from, to, { metrics, every }), from, to };
     }
     const { from, to } = await resolveWindow(start, stop, archive.from, archive.to);
-    return readRollup(getRigId(), from, to, { metrics, every });
+    return { source: rollupSource(getRigId(), from, to, { metrics, every }), from, to };
+}
+
+/** Wide rows for an archive (well run or import), for the UI (capped). */
+async function queryWide(archive, opts = {}) {
+    const { source } = await archiveSource(archive, opts);
+    return collect(source);
+}
+
+/** Streamable export of an archive: { columns(), slices(), from, to }. */
+async function exportArchive(archive, opts = {}) {
+    const { source, from, to } = await archiveSource(archive, opts);
+    return { ...source, from, to, bucket: archive.name };
+}
+
+/** Raw (full-rate) or 1-minute telemetry for any window, as a readable source. */
+async function telemetrySource({ tier = 'raw', start, stop, metrics, every } = {}) {
+    assertQueryWindow({ start, stop, every });
+    const win = await resolveWindow(start, stop, null, null);
+    const source = tier === 'raw'
+        ? valueSource('telemetry', 'rig_id', getRigId(), win.from, win.to, { metrics, every })
+        : rollupSource(getRigId(), win.from, win.to, { metrics, every });
+    return { ...source, from: win.from, to: win.to };
 }
 
 /**
- * Export a well.
+ * Streamable export of a well.
  * @param tier 'raw'     -> full-rate telemetry inside the well's window
  *             'archive' -> the well's permanent 1-minute record
  */
@@ -296,10 +348,10 @@ async function exportWell(well, { tier = 'archive', metrics, start, stop, every 
     const to = stop || well.completedAt || new Date().toISOString();
     assertQueryWindow({ start: from, stop: to, every });
     const win = await resolveWindow(from, to, null, null);
-    const data = tier === 'raw'
-        ? await readValues('telemetry', 'rig_id', getRigId(), win.from, win.to, { metrics, every })
-        : await readRollup(getRigId(), win.from, win.to, { metrics, every });
-    return { ...data, bucket: tier === 'raw' ? 'telemetry' : 'telemetry_1m', tier, well: well.name, from: win.from, to: win.to };
+    const source = tier === 'raw'
+        ? valueSource('telemetry', 'rig_id', getRigId(), win.from, win.to, { metrics, every })
+        : rollupSource(getRigId(), win.from, win.to, { metrics, every });
+    return { ...source, bucket: tier === 'raw' ? 'telemetry' : 'telemetry_1m', tier, well: well.name, from: win.from, to: win.to };
 }
 
 /** Signals and time extent of an archive, named as the data/export endpoints expect. */
@@ -342,6 +394,35 @@ function toCsv({ rows, columns }) {
     const head = ['time', ...columns].join(',');
     const body = rows.map((r) => ['time', ...columns].map((c) => csvEscape(r[c])).join(','));
     return [head, ...body].join('\n');
+}
+
+const csvLine = (row, columns) => ['time', ...columns].map((c) => csvEscape(row[c])).join(',');
+
+/**
+ * Stream an export to an HTTP response as CSV or JSON, slice by slice, honouring
+ * back-pressure. Memory stays bounded by one slice however long the window is.
+ */
+async function streamExport(res, exp, format) {
+    const columns = await exp.columns();
+    const write = (chunk) => (res.write(chunk) ? Promise.resolve() : new Promise((r) => res.once('drain', r)));
+    let rows = 0;
+    if (format === 'json') {
+        const meta = { bucket: exp.bucket, tier: exp.tier, well: exp.well, from: exp.from, to: exp.to, columns, truncated: false };
+        await write(`${JSON.stringify(meta).slice(0, -1)},"rows":[`);
+        for await (const slice of exp.slices()) {
+            for (const row of slice) { await write(`${rows ? ',' : ''}${JSON.stringify(row)}`); rows++; }
+        }
+        await write(']}');
+    } else {
+        await write(`${['time', ...columns].join(',')}\n`);
+        for await (const slice of exp.slices()) {
+            if (!slice.length) continue;
+            await write(`${slice.map((row) => csvLine(row, columns)).join('\n')}\n`);
+            rows += slice.length;
+        }
+    }
+    res.end();
+    return rows;
 }
 
 // One CSV line -> cells, honouring "quoted, cells" and "" escapes.
@@ -479,6 +560,6 @@ const getStatus = () => ({
 
 module.exports = {
     configure, startRun, endRun, updateWellInfo, syncRegistry,
-    listArchives, assertArchiveBucket, describeArchive, queryWide, exportWell, toCsv,
+    listArchives, assertArchiveBucket, describeArchive, queryWide, exportArchive, exportWell, telemetrySource, collect, toCsv, streamExport,
     importHistory, getWellConsumption, getStatus, assertQueryWindow, cleanLabel, splitCsvLine,
 };

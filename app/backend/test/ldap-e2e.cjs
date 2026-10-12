@@ -63,6 +63,7 @@ Object.assign(process.env, {
     PGPASSWORD: 'dummy',
     PG_CONNECT_TIMEOUT_MS: '200',
     DATA_DIR,
+    PERSIST_BACKEND: 'file',
     TELEGRAF_CONFIG_PATH: path.join(DATA_DIR, 'plc.conf'),
     ADMIN_USERNAME: 'admin',
     ADMIN_PASSWORD: 'LocalAdminPass1',

@@ -53,7 +53,7 @@ const RAW_BUCKET = process.env.INFLUX_BUCKET || 'romii_bucket';
 const RIG_ID = need('DEVICE_ID');
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..');
 
-const plcConfig = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'plc_config.json'), 'utf8'));
+const plcConfig = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'plc_config.json'), 'utf8').replace(/^\uFEFF/, ''));
 const mapping = buildMapping(plcConfig);
 const influx = new InfluxDB({ url: INFLUX_URL, token: INFLUX_TOKEN, timeout: 600000 });
 const queryApi = influx.getQueryApi(INFLUX_ORG);

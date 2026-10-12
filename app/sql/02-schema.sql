@@ -259,6 +259,21 @@ CREATE OR REPLACE VIEW well_1m AS
      AND a.bucket >= r.started_at
      AND a.bucket <  COALESCE(r.ended_at, 'infinity'::timestamptz);
 
+-- ---------------------------------------------------------------------
+-- Operating records (schema app): users, work orders, logbook, calibrations,
+-- alarm settings/events, well registry, dashboard layout, sync state, ...
+-- One JSON document per record set (lib/persist.js), loaded into memory by
+-- the backend at start and written back in order. Plain tables: backed up with
+-- pg_dump (Backup-AHWR-EDGE-Records.ps1).
+-- ---------------------------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS app;
+CREATE TABLE IF NOT EXISTS app.documents (
+    name       TEXT PRIMARY KEY,                 -- e.g. users.json, cmms_work_orders.json
+    body       JSONB NOT NULL,
+    version    BIGINT NOT NULL DEFAULT 1,        -- incremented on every write
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Migration bookkeeping (InfluxDB -> TimescaleDB tool) and schema version.
 CREATE TABLE IF NOT EXISTS edge_migration_progress (
     source      TEXT PRIMARY KEY,
@@ -270,7 +285,7 @@ CREATE TABLE IF NOT EXISTS edge_schema (
     version    INTEGER PRIMARY KEY,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-INSERT INTO edge_schema (version) VALUES (1) ON CONFLICT DO NOTHING;
+INSERT INTO edge_schema (version) VALUES (1), (2) ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------
 -- Least-privilege grants
@@ -286,3 +301,5 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
     TO ahwr_app;
 GRANT SELECT ON edge_schema, edge_migration_progress TO ahwr_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ahwr_app;
+GRANT USAGE ON SCHEMA app TO ahwr_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON app.documents TO ahwr_app;

@@ -6,6 +6,10 @@ $ErrorActionPreference = 'Stop'
 #            these scripts (portable folder, the default when runtime\pgsql exists)
 #   service  an installed PostgreSQL 15/16 Windows service with TimescaleDB, as in
 #            the Edge Installation Guide; this script only connects to it
+#
+# After Install-AHWR-EDGE-Services.ps1 everything runs as Windows services that
+# start at boot and restart on failure; this script then only applies schema
+# upgrades, starts any stopped service and opens the dashboard.
 $Root = $PSScriptRoot
 $RunDir = Join-Path $Root 'run'
 $DataDir = Join-Path $Root 'data'
@@ -19,6 +23,7 @@ $Backend = Join-Path $Root 'app\backend\server.js'
 $Collector = Join-Path $Root 'app\collector.py'
 $SqlDir = Join-Path $Root 'app\sql'
 $PgData = Join-Path $DataDir 'pgdata'
+$ServiceMode = [bool](Get-Service 'AHWR-Backend' -ErrorAction SilentlyContinue)
 $RigIdPattern = '^[A-Za-z0-9_.\-]{1,64}$'
 
 foreach ($path in @($Node, $Python, $Telegraf, $Backend, $Collector, (Join-Path $SqlDir '01-roles.sql'), (Join-Path $SqlDir '02-schema.sql'))) {
@@ -121,6 +126,13 @@ $env:FRONTEND_DIST_DIR = Join-Path $Root 'app\frontend\dist'
 $env:TELEGRAF_CONFIG_PATH = Join-Path $Root 'app\telegraf\telegraf.d\plc.conf'
 $env:BOP_CONFIG_PATH = Join-Path $DataDir 'app\bop_config.json'
 $env:TELEGRAF_LISTENER_URL = 'http://127.0.0.1:8186'
+$env:STOP_FILE = Join-Path $RunDir 'backend.stop'
+# Telegraf 1.32+ keeps retrying a PLC that is unreachable at start (older releases
+# exit); the backend then adds startup_error_behavior = "retry" to plc.conf.
+if (-not $env:TELEGRAF_STARTUP_RETRY) {
+    $env:TELEGRAF_STARTUP_RETRY = 'false'
+    if (((& $Telegraf --version) -join ' ') -match 'Telegraf v?(\d+)\.(\d+)' -and ([int]$matches[1] -gt 1 -or [int]$matches[2] -ge 32)) { $env:TELEGRAF_STARTUP_RETRY = 'true' }
+}
 if (-not $env:PGHOST) { $env:PGHOST = '127.0.0.1' }
 if (-not $env:PGPORT) { $env:PGPORT = '5432' }
 if (-not $env:PGDATABASE) { $env:PGDATABASE = 'ahwr_edge' }
@@ -202,6 +214,14 @@ function Assert-PortAvailableOrManaged([int]$Port, [string]$Name) {
 # before anything starts (asks once for Administrator approval).
 Stop-LegacyAhwrServicesIfNeeded
 
+function Start-AhwrService([string]$Name) {
+    $svc = Get-Service $Name -ErrorAction SilentlyContinue
+    if (-not $svc) { return }
+    if ($svc.Status -eq 'Running') { Write-Host "Service $Name is running."; return }
+    try { Start-Service $Name -ErrorAction Stop } catch { throw "Service $Name is $($svc.Status) and could not be started ($($_.Exception.Message)). Start it from services.msc or run Start-AHWR-EDGE.bat as Administrator, and review logs\$Name.log." }
+    Write-Host "Started service $Name."
+}
+
 function Find-Psql {
     $bundled = Join-Path $PgBin 'psql.exe'
     if (Test-Path -LiteralPath $bundled) { return $bundled }
@@ -257,7 +277,12 @@ if ($env:PG_MODE -eq 'bundled') {
         )
     }
     & $PgCtl status -D $PgData | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    if ($ServiceMode -and (Get-Service 'AHWR-PostgreSQL' -ErrorAction SilentlyContinue)) {
+        Start-AhwrService 'AHWR-PostgreSQL'
+        $ready = $false
+        for ($i = 0; $i -lt 60; $i++) { if (Test-Port $pgPort) { $ready = $true; break }; Start-Sleep -Seconds 1 }
+        if (-not $ready) { throw "PostgreSQL is not reachable on 127.0.0.1:$pgPort. Review data\pgdata\log." }
+    } elseif ($LASTEXITCODE -ne 0) {
         Assert-PortAvailableOrManaged $pgPort 'postgresql'
         & $PgCtl start -D $PgData -l (Join-Path $LogDir 'postgresql.log') -w -t 120 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL did not start. Review logs\postgresql.log.' }
@@ -279,17 +304,35 @@ if ($env:PG_MODE -eq 'bundled') {
 }
 
 # --- Telegraf, backend, BOP collector ------------------------------------------
-Assert-PortAvailableOrManaged 8888 'telegraf'
-Assert-PortAvailableOrManaged 8186 'telegraf'
-Assert-PortAvailableOrManaged 8080 'backend'
-Start-ManagedProcess 'telegraf' $Telegraf "--config `"$Root\app\telegraf\telegraf.conf`" --config-directory `"$Root\app\telegraf\telegraf.d`" --watch-config=poll" (Join-Path $Root 'app\telegraf')
-Start-ManagedProcess 'backend' $Node "`"$Backend`"" (Join-Path $Root 'app\backend')
+$appPort = if ($env:PORT) { [int]$env:PORT } else { 8080 }
+$scheme = if ($env:TLS_CERT_FILE -and $env:TLS_KEY_FILE) { 'https' } else { 'http' }
+$probeHost = if ($env:HOST -and $env:HOST -notin @('0.0.0.0', '::')) { $env:HOST } else { '127.0.0.1' }
+if ($ServiceMode) {
+    $stamp = Join-Path $RunDir 'services.installed'
+    if ((Test-Path -LiteralPath $stamp) -and (Get-Item -LiteralPath $SettingsFile).LastWriteTime -gt (Get-Item -LiteralPath $stamp).LastWriteTime) {
+        Write-Host 'settings.env changed since the services were installed: restart AHWR-Backend and AHWR-BOP-Collector (or re-run Install-AHWR-EDGE-Services.ps1) to apply it.' -ForegroundColor Yellow
+    }
+    foreach ($name in @('AHWR-Telegraf', 'AHWR-Backend', 'AHWR-BOP-Collector')) { Start-AhwrService $name }
+} else {
+    Assert-PortAvailableOrManaged 8888 'telegraf'
+    Assert-PortAvailableOrManaged 8186 'telegraf'
+    Assert-PortAvailableOrManaged $appPort 'backend'
+    Start-ManagedProcess 'telegraf' $Telegraf "--config `"$Root\app\telegraf\telegraf.conf`" --config-directory `"$Root\app\telegraf\telegraf.d`" --watch-config=poll" (Join-Path $Root 'app\telegraf')
+    Start-ManagedProcess 'backend' $Node "`"$Backend`"" (Join-Path $Root 'app\backend')
+}
 
+# Readiness probe of this PC's own backend (its certificate may be self-signed).
+$healthUrl = "${scheme}://${probeHost}:$appPort/healthz"
+if ($scheme -eq 'https' -and $PSVersionTable.PSVersion.Major -lt 6) { [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true } }
 $backendReady = $false
 for ($i = 0; $i -lt 45; $i++) {
-    try { $null = Invoke-RestMethod 'http://127.0.0.1:8080/healthz' -TimeoutSec 2; $backendReady = $true; break } catch { Start-Sleep -Seconds 1 }
+    try {
+        if ($PSVersionTable.PSVersion.Major -ge 6) { $null = Invoke-RestMethod $healthUrl -TimeoutSec 2 -SkipCertificateCheck } else { $null = Invoke-RestMethod $healthUrl -TimeoutSec 2 }
+        $backendReady = $true; break
+    } catch { Start-Sleep -Seconds 1 }
 }
-if (-not $backendReady) { throw 'AHWR backend did not start. Review logs\backend.err.log.' }
+if ($scheme -eq 'https' -and $PSVersionTable.PSVersion.Major -lt 6) { [Net.ServicePointManager]::ServerCertificateValidationCallback = $null }
+if (-not $backendReady) { throw "AHWR backend did not answer on $healthUrl. Review $(if ($ServiceMode) { 'logs\AHWR-Backend.log' } else { 'logs\backend.err.log' })." }
 
 # The initial password is only needed once to seed the app user store; remove it
 # from the environment file after the first successful initialization.
@@ -299,12 +342,14 @@ if ($settingsContent -match '(?m)^ADMIN_PASSWORD=') {
     Set-Content -LiteralPath $SettingsFile -Value $settingsContent.TrimEnd() -Encoding UTF8
 }
 
-Start-ManagedProcess 'bop-collector' $Python "`"$Collector`"" (Join-Path $Root 'app')
+if (-not $ServiceMode) { Start-ManagedProcess 'bop-collector' $Python "`"$Collector`"" (Join-Path $Root 'app') }
 
 $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.AddressState -eq 'Preferred' } | Select-Object -First 1 -ExpandProperty IPAddress)
 Write-Host ''
-Write-Host "AHWR-EDGE is running (rig $($env:DEVICE_ID), historian: TimescaleDB, $($env:PG_MODE) mode)." -ForegroundColor Green
-Write-Host 'This PC: http://localhost:8080'
-if ($lanIp) { Write-Host "Other PCs on this LAN: http://${lanIp}:8080" }
+Write-Host "AHWR-EDGE is running (rig $($env:DEVICE_ID), historian: TimescaleDB, $($env:PG_MODE) mode$(if ($ServiceMode) { ', Windows services' }))." -ForegroundColor Green
+$localUrl = "${scheme}://localhost:$appPort"
+if ($probeHost -ne '127.0.0.1') { $localUrl = "${scheme}://${probeHost}:$appPort" }
+Write-Host "This PC: $localUrl"
+if ($lanIp -and $probeHost -eq '127.0.0.1' -and $env:HOST -ne '127.0.0.1') { Write-Host "Other PCs on this LAN: ${scheme}://${lanIp}:$appPort" }
 Write-Host 'Allow Windows Firewall access on the Private network if prompted.'
-Start-Process 'http://localhost:8080'
+Start-Process $localUrl

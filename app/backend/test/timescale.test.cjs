@@ -70,6 +70,10 @@ test('managed plc.conf: rig_id tag, starlark processor, inputs; rewritten only o
   assert.equal(writeManagedConfig(conf, cfg, { rigId: 'AHWR-50-III' }), false);
   const { conf: other } = buildManagedConfig(cfg, { rigId: 'AHWR-50-III', starPath: '/etc/telegraf/telegraf.d/ahwr-telemetry.star' });
   assert.match(other, /script = '\/etc\/telegraf\/telegraf\.d\/ahwr-telemetry\.star'/);
+  // Telegraf 1.32+: keep retrying a PLC that is unreachable at start (opt-in).
+  assert.doesNotMatch(other, /startup_error_behavior/);
+  const { conf: retry } = buildManagedConfig(cfg, { rigId: 'AHWR-50-III', starPath: '/x/ahwr-telemetry.star', startupRetry: true });
+  assert.match(retry, /\[\[inputs\.s7comm\]\]\n  server = "10\.0\.0\.5:102"\n  rack = \d+\n  slot = \d+\n  startup_error_behavior = "retry"\n/);
 });
 
 test('rig id and Modbus slaveId cannot inject TOML', () => {

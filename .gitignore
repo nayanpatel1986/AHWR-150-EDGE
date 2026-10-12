@@ -32,6 +32,8 @@ data/influx/
 data/pgdata/
 data/app/sync_buffer/
 data/app/sync_deadletter/
+data/app/imported-to-database-*/
+backups/
 data/app/*.tmp
 data/app/*.bak*
 data/app/activity_log.json

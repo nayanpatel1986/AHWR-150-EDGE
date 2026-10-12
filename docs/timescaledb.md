@@ -3,8 +3,9 @@
 The edge historian is PostgreSQL + TimescaleDB, database `ahwr_edge`. It stores
 data in the **same tables and columns as the Central Monitoring Facility (CMF)**
 (`central/db/init.sql`), so edge rows can be copied to, replayed into or compared
-with the CMF without transformation. InfluxDB is no longer used at run time; a
-one-time tool migrates its history.
+with the CMF without transformation. The operating records (users, work orders,
+logbook, alarm settings, …) are in the same database. InfluxDB is no longer used
+at run time; a one-time tool migrates its history.
 
 Monitoring-only is unchanged: nothing in the database, Telegraf or the backend
 writes to a PLC.
@@ -16,6 +17,7 @@ S7 / Modbus PLC ──read──▶ Telegraf ──(Starlark: tag → CMF metric
 VersaMax BOP (OPC UA) ─▶ collector.py ─▶ Telegraf :8186 (loopback) ─┘          │
                                                                                 ├─▶ telemetry_1m (1-minute rollup, kept forever)
 backend: alarms, connections, well lifecycle ─▶ events, connections, wells, well_runs
+backend: users, work orders, logbook, settings ─▶ app.documents (operating records)
 backend live view (1 Hz) ◀── latest value per metric over the last 10 s
 ```
 
@@ -36,7 +38,21 @@ backend live view (1 Hz) ◀── latest value per metric over the last 10 s
   does not supply them (stored as telemetry, not while the feed is stale), and
   writes every event it queues for the CMF into `events` (and `connections`).
 * **The BOP collector** no longer holds database credentials: it posts line
-  protocol to Telegraf's loopback listener (`TELEGRAF_LISTENER_URL`).
+  protocol to Telegraf's loopback listener (`TELEGRAF_LISTENER_URL`). It keeps
+  one OPC UA session open and reads all configured nodes in one request per
+  cycle, reconnecting with back-off.
+* **Operating records** — the former JSON files in `DATA_DIR` (users, work
+  orders, logbook, overhauls, PM, calibrations, instruments, alarm settings and
+  alarm history, activity/downtime logs, run hours, well registry, dashboard
+  layout, PLC and BOP configuration) — are rows of `app.documents`, one per file
+  name. `server.js` loads them before the application starts and waits, retrying
+  every 5 s, while the database is unreachable, so the edge never starts on empty
+  or stale records. On the first start existing `*.json` files are imported and
+  moved to `DATA_DIR/imported-to-database-<time>/`. Writes are coalesced (2 s;
+  10 s for documents over 256 KB) and retried until the database accepts them;
+  shutdown flushes them. `plc_config.json` and `bop_config.json` are still
+  mirrored as files, because the BOP collector reads its configuration from disk.
+  `PERSIST_BACKEND=file` keeps the old file store (tests and development only).
 
 ## Schema (`app/sql`)
 
@@ -51,6 +67,7 @@ backend live view (1 Hz) ◀── latest value per metric over the last 10 s
 | `well_1m` (view) | edge | `telemetry_1m_all` within each run window — the per-well 1-minute record |
 | `telemetry_import`, `telemetry_imports` | edge | imported CSV/JSON history, never mixed with live data |
 | `telemetry_1m_legacy`, `telemetry_1m_all` (view) | edge | 1-minute history migrated from InfluxDB for periods with no raw data |
+| `app.documents (name, body jsonb, version, updated_at)` | edge | operating records, one row per former JSON file; daily backup (below) |
 
 Differences from the CMF are deliberate: retention/compression sized for one PC,
 and **no UNIQUE index on `telemetry`** (replay de-duplication is the CMF's job; a
@@ -58,7 +75,7 @@ unique violation would make Telegraf drop a whole batch).
 
 Roles (`01-roles.sql`): `telegraf_writer` — INSERT on `telemetry` only;
 `ahwr_app` — the backend (read telemetry/rollups, write derived telemetry,
-events, wells/runs, tags, imports); `postgres` — schema only.
+events, wells/runs, tags, imports, operating records); `postgres` — schema only.
 
 ## Measured on the test stack (Docker Desktop, Apple Silicon)
 
@@ -82,7 +99,7 @@ events, wells/runs, tags, imports); `postgres` — schema only.
   script runs `initdb` into `data\pgdata` (scram-sha-256, `listen_addresses =
   '127.0.0.1'`, `shared_preload_libraries = 'timescaledb'`, telemetry off), starts
   it with `pg_ctl`, and applies `app\sql` (idempotent) on every start.
-  `Stop-AHWR-EDGE.ps1` stops it cleanly.
+  `Stop-AHWR-EDGE.ps1 -All` stops it cleanly, after the backend.
 * `service` — an installed PostgreSQL service per the Edge Installation Guide;
   the script waits for it and applies `app\sql` when `PG_SUPERUSER_PASSWORD` is
   set and `psql` is found.
@@ -91,11 +108,61 @@ An InfluxDB-edition `settings.env` is upgraded in place: the script appends the
 missing `DEVICE_ID` (asked once), `PG_*` and password settings and keeps the
 `INFLUX_*` keys for the migration.
 
+`Stop-AHWR-EDGE.bat` stops collection (Telegraf, BOP collector) and leaves the
+dashboard and PostgreSQL running, so records can still be saved;
+`Stop-AHWR-EDGE.ps1 -All` stops everything. The backend is asked to stop through
+`run\backend.stop` and saves pending records before it exits.
+
+### Windows services: start at boot, restart on failure
+
+After a first successful start, run once in an elevated PowerShell:
+
+```
+Install-AHWR-EDGE-Services.ps1 [-ServiceUser .\svc-ahwr] [-BackupTime 02:30]
+```
+
+It needs `nssm.exe` (NSSM 2.24, win64) in `runtime\nssm\` and registers:
+
+| Service | Runs | Depends on |
+|---|---|---|
+| `AHWR-PostgreSQL` | bundled PostgreSQL (`pg_ctl register`, NetworkService, data `data\pgdata`, logs `data\pgdata\log`); restarted by Windows on failure | — |
+| `AHWR-Telegraf` | `telegraf.exe` with `telegraf.conf` + `telegraf.d` | PostgreSQL |
+| `AHWR-Backend` | `node server.js` | PostgreSQL |
+| `AHWR-BOP-Collector` | `python collector.py` | Telegraf |
+
+With `PG_MODE=service` the installed PostgreSQL service is used instead (name
+from `PG_SERVICE_NAME`, default `postgresql-x64-16`) and set to automatic start.
+
+All services start at boot without anyone signing in and are restarted 5 s after
+they stop. They run as the built-in low-privilege `LocalService` account
+(`-ServiceUser` for a local account), which gets read access to the folder and
+write access only to `data\app`, `logs` and `app\telegraf\telegraf.d`. Stopping a
+service sends Ctrl+C and allows 15 s, so the backend flushes its records. Logs are
+`logs\AHWR-*.log`, rotated at 10 MB.
+
+The backend and the collector read `settings.env` themselves when they start
+(`SETTINGS_FILE`), so secrets are not copied into the service registry and an
+edited `settings.env` applies at the next service restart; Telegraf receives only
+its insert-only database password. Afterwards `Start-AHWR-EDGE.bat` applies
+schema upgrades, starts any stopped service and opens the dashboard;
+`Remove-AHWR-EDGE-Services.ps1` returns to the portable launcher (data kept).
+
+**Telegraf and an unreachable PLC.** Telegraf 1.29–1.31 exits when a PLC input
+cannot connect at start (1.31 accepts the option below but s7comm still exits).
+From **Telegraf 1.32** the backend writes `startup_error_behavior = "retry"`
+into each PLC input of `plc.conf`, so Telegraf keeps running and connects when
+the PLC comes up; the scripts detect the version (`TELEGRAF_STARTUP_RETRY`
+overrides it). Ship Telegraf 1.32 or later in `runtime\telegraf` (tested with
+1.36.4, the Docker image). Under the services an older Telegraf is restarted
+every 5 s instead.
+
 ### Docker (`docker-compose.yml`)
 
 `docker compose up -d --build` with a `.env` (see the file header). The database
 is initialised by `app/sql/docker-init.sh`; the backend and Telegraf share the
-`telegraf.d` volume.
+`telegraf.d` volume. Telegraf is 1.36.4 with startup retry: on the test stack it
+ran with the PLC unreachable and collected 519 metrics/s within 10 s of the PLC
+coming up, without a restart.
 
 ### Edge Installation Guide (TimescaleDB, without Docker) — what changed
 
@@ -104,16 +171,14 @@ is initialised by `app/sql/docker-init.sh`; the backend and Telegraf share the
 | 3.3 schema `raw`, one hypertable per measurement created by Telegraf | One CMF `telemetry` table in `public`. Wide per-measurement tables cannot hold this rig map: 20 PLC tag names exceed PostgreSQL's 63-byte column-name limit (longest 173 bytes), and dynamically added columns cannot feed a continuous aggregate. |
 | 3.3 `well_1m` continuous aggregate | `telemetry_1m` (CMF continuous aggregate) + view `well_1m` over `well_runs` windows |
 | 3.3 compress after 1 day, 1-day chunks | 6-hour chunks, compress after 12 h — a long-format rig-day is 7.4 GB uncompressed |
-| 3.3 schema `app` (users, work orders, logbook, …) | **Not yet**: operating records are still JSON files in `DATA_DIR`. Back up `DATA_DIR` as well as the database. |
+| 3.3 schema `app` (users, work orders, logbook, …) | Schema `app`, table `app.documents`: one JSONB row per former JSON file (the application's record format is unchanged) |
 | 4.5 `01-roles.sql` creates schemas `raw`/`app` | `app/sql/01-roles.sql` + `02-schema.sql`; `telegraf_writer` gets INSERT on `telemetry` only, no CREATE |
 | 5.2 `create_templates` | Telegraf only inserts (`create_templates = []`, `add_column_templates = []`, `timestamp_column_name = "ts"`, timestamptz) |
 | 5.2 / 7.3 hand-edit the `rig` tag in telegraf.conf | `rig_id` is written into `plc.conf` from `DEVICE_ID`; no hand edit |
 | 4.x PostgreSQL 16 | Tested on PostgreSQL 15 + TimescaleDB 2.28.3 (the CMF's versions); match the CMF's TimescaleDB version |
 | 8 checks: jobs per `raw` table; `SELECT max(time) FROM raw.<m>` | Jobs: `telemetry` compression + retention, `telemetry_1m` refresh + compression; fresh data: `SELECT max(ts) FROM telemetry WHERE rig_id = '<DEVICE_ID>'` |
 
-Telegraf 1.29.5 exits if the PLC is unreachable when it starts; under the
-guide's NSSM services it is restarted automatically, under the portable launcher
-it is not.
+| NSSM Windows services | `Install-AHWR-EDGE-Services.ps1` (above): same service layout, secrets read from `settings.env`, low-privilege account, daily records backup |
 
 ## Migrating InfluxDB-edition history
 
@@ -140,6 +205,28 @@ the first run), keeps progress in `edge_migration_progress` and resumes. Expect
 hours for 90 days of full-rate data (≈ 47 M rows per rig-day); use a smaller
 `-RawDays` to finish sooner with older data kept at 1-minute resolution.
 Restart the backend afterwards so it back-fills `well_runs` from `wells.json`.
+
+## Backups
+
+The telemetry is copied to the CMF; the operating records exist only here.
+`Backup-AHWR-EDGE-Records.ps1` dumps `app.*`, `wells`, `well_runs`, `rigs`,
+`tags` and `telemetry_imports` (`pg_dump -Fc`, as `ahwr_app`) to
+`backups\records-<time>.dump` and keeps 14 days. `Install-AHWR-EDGE-Services.ps1`
+schedules it daily (task "AHWR-EDGE records backup"). Copy `backups\` off the PC
+with the rest of the site backups.
+
+Restore with PostgreSQL running and the backend stopped (it holds the records in
+memory), as `postgres`:
+
+```
+Stop-Service AHWR-BOP-Collector, AHWR-Backend
+psql -h 127.0.0.1 -U postgres -d ahwr_edge -c "TRUNCATE app.documents, wells, well_runs, rigs, tags, telemetry_imports"
+pg_restore -h 127.0.0.1 -U postgres -d ahwr_edge --data-only --disable-triggers --exit-on-error backups\records-<time>.dump
+Start-Service AHWR-Backend, AHWR-BOP-Collector
+```
+
+(Tested on TimescaleDB 2.28.3: all documents, wells, runs, tags and the run id
+sequence restored into a freshly initialised database.)
 
 ## Operations
 

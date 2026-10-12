@@ -9,10 +9,14 @@ Central Monitoring Facility (CMF). Monitoring only: it never writes to a PLC.
 - Node.js backend and user-management implementation
 - Telegraf S7 read-only collection configuration (`app/telegraf`)
 - CAT ENG-1, CAT ENG-2, HPU and remaining PLC database mappings
-- TimescaleDB historian in the CMF canonical schema (`app/sql`, `docs/timescaledb.md`)
+- TimescaleDB historian in the CMF canonical schema, with the operating records
+  in the same database (`app/sql`, `docs/timescaledb.md`)
 - One-time InfluxDB → TimescaleDB history migration (`Migrate-AHWR-EDGE-InfluxDB.ps1`)
-- Windows start/stop/health-check scripts and a Docker stack (`docker-compose.yml`)
-- WITSML interchange analysis (`docs/witsml-interchange.md`)
+- Windows start/stop/health-check scripts, Windows services that start at boot
+  and restart on failure (`Install-AHWR-EDGE-Services.ps1`), a daily records
+  backup (`Backup-AHWR-EDGE-Records.ps1`) and a Docker stack (`docker-compose.yml`)
+- WITSML 1.4.1.1 export validated against the official schemas, and an ETP v1.2
+  ChannelStreaming publisher (`docs/witsml-interchange.md`)
 
 ## Deliberately excluded
 
@@ -24,8 +28,10 @@ use `data/app/users.example.json` as a schema reference.
 
 The bundled `runtime` directory is also excluded because third-party binaries
 exceed GitHub's normal file-size limits. Keep it in the secured offline transfer
-image: `runtime\node`, `runtime\python`, `runtime\telegraf` (1.29 or later) and,
-for `PG_MODE=bundled`, `runtime\pgsql` (PostgreSQL 15/16 for Windows with the
+image: `runtime\node`, `runtime\python`, `runtime\telegraf` (1.32 or later, so
+Telegraf keeps retrying a PLC that is unreachable at start; 1.29+ still runs),
+`runtime\nssm\nssm.exe` (NSSM 2.24, win64, for the Windows services) and, for
+`PG_MODE=bundled`, `runtime\pgsql` (PostgreSQL 15/16 for Windows with the
 TimescaleDB files matching the CMF's version). For `PG_MODE=service`, install
 PostgreSQL + TimescaleDB as described in the Edge Installation Guide instead.
 
@@ -38,10 +44,17 @@ PostgreSQL + TimescaleDB as described in the Edge Installation Guide instead.
    TimescaleDB and applies `app\sql`.
 3. Confirm the PLC address and DB mappings in Administration > S7 PLC.
 4. Open `http://localhost:8080` and verify the administrator account.
+5. Run `Install-AHWR-EDGE-Services.ps1` in an elevated PowerShell so the edge
+   starts at boot, restarts after a failure and backs up its records daily
+   (see `docs/timescaledb.md`).
 
 Upgrading an InfluxDB-edition install: run `Start-AHWR-EDGE.bat` (it adds the
 new settings and keeps the old ones), then `Migrate-AHWR-EDGE-InfluxDB.ps1` once
 to copy the history. See `docs/timescaledb.md`.
+
+Operating records are now stored in the database; existing JSON files in
+`data\app` are imported on the first start of this version. Back up with
+`Backup-AHWR-EDGE-Records.ps1` (scheduled by the services installer).
 
 Do not reuse `settings.env` or user databases between rigs. Each rig must have
 its own database passwords, JWT secret, device id/token and central-server identity.

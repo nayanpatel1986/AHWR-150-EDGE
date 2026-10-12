@@ -2,11 +2,26 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import urllib.request
 from pathlib import Path
 
 from asyncua import Client, ua
+
+
+def load_settings_file(path):
+    """SETTINGS_FILE (Windows service): KEY=value lines, read like the PowerShell
+    scripts read settings.env; variables already set take precedence."""
+    with open(path, encoding="utf-8-sig") as fh:
+        for line in fh:
+            m = re.match(r"^\s*([^#=]+)=(.*)$", line.rstrip("\r\n"))
+            if m and m.group(1).strip() != "PATH":
+                os.environ.setdefault(m.group(1).strip(), m.group(2))
+
+
+if os.getenv("SETTINGS_FILE"):
+    load_settings_file(os.environ["SETTINGS_FILE"])
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),

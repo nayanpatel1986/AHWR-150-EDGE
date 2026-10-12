@@ -15,8 +15,12 @@ const { buildMapping, starlarkSource, hashOf } = require('./telemetryMap');
 const STAR_FILE = 'ahwr-telemetry.star';
 const RIG_ID_RE = /^[A-Za-z0-9_.\-]{1,64}$/;
 
-const generateTelegrafConfig = (config) => {
+// startupRetry: keep retrying an unreachable PLC instead of exiting at start
+// (startup_error_behavior = "retry"; Telegraf 1.32 or later -- older versions
+// reject the option or still exit).
+const generateTelegrafConfig = (config, { startupRetry = false } = {}) => {
     let toml = '';
+    const retry = startupRetry ? `  startup_error_behavior = "retry"\n` : '';
 
     // Slaves are now treated as "Devices" which can be Modbus or S7comm
     config.slaves.forEach(slave => {
@@ -28,6 +32,7 @@ const generateTelegrafConfig = (config) => {
             toml += `  slave_id = ${Number(slave.slaveId) || 1}\n`;
             toml += `  timeout = "1s"\n`;
             toml += `  controller = "tcp://${slave.ip}:${slave.port || 502}"\n`;
+            toml += retry;
             toml += `  configuration_type = "register"\n`;
             toml += `  optimization = "none"\n\n`;
 
@@ -71,6 +76,7 @@ const generateTelegrafConfig = (config) => {
             toml += `  server = "${slave.ip}:${slave.port || 102}"\n`;
             toml += `  rack = ${slave.rack || 0}\n`;
             toml += `  slot = ${slave.slot || 0}\n`;
+            toml += retry;
 
             // S7comm uses metrics which group fields together
             if (slave.metrics && slave.metrics.length > 0) {
@@ -104,9 +110,9 @@ const assertRigId = (rigId) => {
 };
 
 /** Contents of the managed plc.conf and its Starlark map for a PLC config. */
-function buildManagedConfig(config, { rigId, starPath }) {
+function buildManagedConfig(config, { rigId, starPath, startupRetry = false }) {
     const star = starlarkSource(buildMapping(config));
-    const inputs = generateTelegrafConfig(config);
+    const inputs = generateTelegrafConfig(config, { startupRetry });
     const hash = hashOf(star + inputs + rigId);
     const conf = [
         '# =============================================================================',
@@ -132,10 +138,10 @@ function buildManagedConfig(config, { rigId, starPath }) {
  * Write plc.conf (and the Starlark map before it, so a reload always sees a
  * matching map). Skips the write when nothing changed. Returns true if written.
  */
-function writeManagedConfig(confPath, config, { rigId, scriptPath }) {
+function writeManagedConfig(confPath, config, { rigId, scriptPath, startupRetry = false }) {
     const starPath = path.join(path.dirname(confPath), STAR_FILE);
     // scriptPath: where Telegraf sees the map, if its filesystem differs (containers).
-    const { conf, star } = buildManagedConfig(config, { rigId, starPath: scriptPath || starPath });
+    const { conf, star } = buildManagedConfig(config, { rigId, starPath: scriptPath || starPath, startupRetry });
     const current = fs.existsSync(confPath) ? fs.readFileSync(confPath, 'utf8') : '';
     const currentStar = fs.existsSync(starPath) ? fs.readFileSync(starPath, 'utf8') : '';
     if (current === conf && currentStar === star) return false;

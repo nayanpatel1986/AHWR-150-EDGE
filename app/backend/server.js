@@ -9,6 +9,19 @@
 //
 // PERSIST_BACKEND=file keeps records as JSON files in DATA_DIR instead
 // (tests and development only).
+// Windows services (Install-AHWR-EDGE-Services.ps1) pass SETTINGS_FILE rather
+// than the settings themselves, so secrets stay out of the service registry and
+// edits apply on the next restart. Parsed as the PowerShell scripts parse it
+// (KEY=value, the value verbatim); variables already set take precedence.
+const loadSettingsFile = (file) => {
+    const text = require('fs').readFileSync(file, 'utf8').replace(/^\uFEFF/, '');
+    for (const line of text.split(/\r?\n/)) {
+        const m = /^\s*([^#=]+)=(.*)$/.exec(line);
+        const key = m && m[1].trim();
+        if (key && key !== 'PATH' && process.env[key] === undefined) process.env[key] = m[2];
+    }
+};
+if (process.env.SETTINGS_FILE) loadSettingsFile(process.env.SETTINGS_FILE);
 require('dotenv').config();
 const persist = require('./lib/persist');
 

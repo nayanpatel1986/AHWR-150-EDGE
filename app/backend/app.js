@@ -369,7 +369,8 @@ let tagMapping = telemetryMap.buildMapping(getModbusConfig());
 // Rewrite telegraf.d/plc.conf for a PLC config (Telegraf hot-reloads it).
 function applyTelegrafConfig(config = getModbusConfig()) {
     tagMapping = telemetryMap.buildMapping(config);
-    if (telegrafConfig.writeManagedConfig(CONFIG_PATH, config, { rigId: currentRigId(), scriptPath: process.env.TELEGRAF_SCRIPT_PATH })) {
+    const startupRetry = /^(1|true|yes)$/i.test(process.env.TELEGRAF_STARTUP_RETRY || '');
+    if (telegrafConfig.writeManagedConfig(CONFIG_PATH, config, { rigId: currentRigId(), scriptPath: process.env.TELEGRAF_SCRIPT_PATH, startupRetry })) {
         console.log(`Telegraf PLC config written to ${CONFIG_PATH} (Telegraf hot-reloads it).`);
     }
 }
@@ -1881,7 +1882,7 @@ const shutdown = async (signal) => {
     clearInterval(flushTimer);
     clearInterval(historianTimer);
     try { await flushDrillingState(); } catch (e) { /* best effort */ }
-    try { await persist.flush(); } catch (e) { /* best effort */ }
+    try { await Promise.race([persist.flush(), new Promise((r) => setTimeout(r, 8000))]); } catch (e) { /* best effort */ }
     io.close();
     tsdb.close().catch(() => {});
     server.close(() => { console.log('HTTP server closed.'); process.exit(0); });
@@ -1889,3 +1890,15 @@ const shutdown = async (signal) => {
 };
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGBREAK', () => shutdown('SIGBREAK')); // Windows service stop (Ctrl+Break)
+// Windows has no SIGTERM for a hidden background process: Stop-AHWR-EDGE.ps1
+// creates STOP_FILE to ask for the same graceful shutdown.
+if (process.env.STOP_FILE) {
+    const stopFile = process.env.STOP_FILE;
+    try { fs.unlinkSync(stopFile); } catch (e) { /* not present */ }
+    setInterval(() => {
+        if (!fs.existsSync(stopFile)) return;
+        try { fs.unlinkSync(stopFile); } catch (e) { /* ignore */ }
+        shutdown('stop request');
+    }, 1000).unref();
+}

@@ -131,9 +131,11 @@ io.on('connection', (socket) => {
     socket.emit('central_messages_update', centralMessages.snapshot());
 });
 
-// Start the store-and-forward sync agent + ETP 2.0 publisher (outbound only).
+// Tag dictionary (metric -> label/unit), loaded from the historian at start.
+const tagInfo = new Map();
+// Start the store-and-forward sync agent + ETP v1.2 publisher (outbound only).
 sync.start(io);
-etp.start(io);
+etp.start(io, { describeMetric: (metric) => tagInfo.get(metric) });
 centralMessages.start(io);
 
 // Rig identity in the historian = the CMF device id (sync config, else DEVICE_ID).
@@ -1533,7 +1535,7 @@ app.post('/api/sync/flush', auth.requireAuth, auth.requireRole('admin'), async (
 // --- Edge health / data quality ---
 app.get('/api/health/edge', auth.requireAuth, (req, res) => res.json(health.getEdgeHealth(latestRigData, sync.getStatus())));
 
-// --- ETP 2.0 publisher (outbound only) ---
+// --- ETP v1.2 publisher (outbound only) ---
 app.get('/api/etp/status', auth.requireAuth, (req, res) => res.json(etp.getStatus()));
 app.put('/api/etp/config', auth.requireAuth, auth.requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, status: await etp.setConfig(req.body || {}) }); }
@@ -1847,6 +1849,8 @@ const historianStartup = async () => {
     try {
         await tsdb.ensureRig(currentRigId());
         await tsdb.upsertTags(tagDictionary());
+        const { rows: tagRows } = await tsdb.query('SELECT metric, label, unit FROM tags');
+        for (const r of tagRows) tagInfo.set(r.metric, { label: r.label, unit: r.unit });
         const runs = await wellArchive.syncRegistry(wells.getWells());
         historianReady = true;
         console.log(`TimescaleDB historian ready (rig ${currentRigId()}, ${runs} well run(s) synced).`);

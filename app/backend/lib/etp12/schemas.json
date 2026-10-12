@@ -1,0 +1,2200 @@
+{
+ "source": "Energistics Transfer Protocol (ETP) v1.2 Avro schemas, extracted from etptypes 1.2.0 (Geosiris, Apache-2.0)",
+ "messages": [
+  {
+   "name": "MessageHeader",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Datatypes",
+    "name": "MessageHeader",
+    "fields": [
+     {
+      "name": "protocol",
+      "type": "int"
+     },
+     {
+      "name": "messageType",
+      "type": "int"
+     },
+     {
+      "name": "correlationId",
+      "type": "long"
+     },
+     {
+      "name": "messageId",
+      "type": "long"
+     },
+     {
+      "name": "messageFlags",
+      "type": "int"
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Datatypes.MessageHeader",
+    "depends": []
+   }
+  },
+  {
+   "name": "RequestSession",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "RequestSession",
+    "protocol": "0",
+    "messageType": "1",
+    "senderRole": "client",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "applicationName",
+      "type": "string"
+     },
+     {
+      "name": "applicationVersion",
+      "type": "string"
+     },
+     {
+      "name": "clientInstanceId",
+      "type": {
+       "type": "fixed",
+       "namespace": "Energistics.Etp.v12.Datatypes",
+       "name": "Uuid",
+       "size": 16,
+       "fullName": "Energistics.Etp.v12.Datatypes.Uuid",
+       "depends": []
+      }
+     },
+     {
+      "name": "requestedProtocols",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes",
+        "name": "SupportedProtocol",
+        "fields": [
+         {
+          "name": "protocol",
+          "type": "int"
+         },
+         {
+          "name": "protocolVersion",
+          "type": {
+           "type": "record",
+           "namespace": "Energistics.Etp.v12.Datatypes",
+           "name": "Version",
+           "fields": [
+            {
+             "name": "major",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "minor",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "revision",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "patch",
+             "type": "int",
+             "default": 0
+            }
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.Version",
+           "depends": []
+          }
+         },
+         {
+          "name": "role",
+          "type": "string"
+         },
+         {
+          "name": "protocolCapabilities",
+          "type": {
+           "type": "map",
+           "values": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "DataValue",
+            "fields": [
+             {
+              "name": "item",
+              "type": [
+               "null",
+               "boolean",
+               "int",
+               "long",
+               "float",
+               "double",
+               "string",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "boolean"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "boolean"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "int"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "int"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "long"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "long"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfFloat",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "float"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfDouble",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "double"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfString",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "string"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBytes",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "bytes"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+                "depends": []
+               },
+               "bytes",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "AnySparseArray",
+                "fields": [
+                 {
+                  "name": "slices",
+                  "type": {
+                   "type": "array",
+                   "items": {
+                    "type": "record",
+                    "namespace": "Energistics.Etp.v12.Datatypes",
+                    "name": "AnySubarray",
+                    "fields": [
+                     {
+                      "name": "start",
+                      "type": "long"
+                     },
+                     {
+                      "name": "slice",
+                      "type": {
+                       "type": "record",
+                       "namespace": "Energistics.Etp.v12.Datatypes",
+                       "name": "AnyArray",
+                       "fields": [
+                        {
+                         "name": "item",
+                         "type": [
+                          "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                          "bytes"
+                         ]
+                        }
+                       ],
+                       "fullName": "Energistics.Etp.v12.Datatypes.AnyArray",
+                       "depends": [
+                        "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfString"
+                       ]
+                      }
+                     }
+                    ],
+                    "fullName": "Energistics.Etp.v12.Datatypes.AnySubarray",
+                    "depends": [
+                     "Energistics.Etp.v12.Datatypes.AnyArray"
+                    ]
+                   }
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.AnySparseArray",
+                "depends": [
+                 "Energistics.Etp.v12.Datatypes.AnySubarray"
+                ]
+               }
+              ]
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.DataValue",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+             "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+             "Energistics.Etp.v12.Datatypes.ArrayOfString",
+             "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+             "Energistics.Etp.v12.Datatypes.AnySparseArray"
+            ]
+           }
+          },
+          "default": {}
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.SupportedProtocol",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.Version",
+         "Energistics.Etp.v12.Datatypes.DataValue"
+        ]
+       }
+      }
+     },
+     {
+      "name": "supportedDataObjects",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes",
+        "name": "SupportedDataObject",
+        "fields": [
+         {
+          "name": "qualifiedType",
+          "type": "string"
+         },
+         {
+          "name": "dataObjectCapabilities",
+          "type": {
+           "type": "map",
+           "values": "Energistics.Etp.v12.Datatypes.DataValue"
+          },
+          "default": {}
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.SupportedDataObject",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.DataValue"
+        ]
+       }
+      }
+     },
+     {
+      "name": "supportedCompression",
+      "type": {
+       "type": "array",
+       "items": "string"
+      },
+      "default": []
+     },
+     {
+      "name": "supportedFormats",
+      "type": {
+       "type": "array",
+       "items": "string"
+      },
+      "default": [
+       "xml"
+      ]
+     },
+     {
+      "name": "currentDateTime",
+      "type": "long"
+     },
+     {
+      "name": "earliestRetainedChangeTime",
+      "type": "long"
+     },
+     {
+      "name": "serverAuthorizationRequired",
+      "type": "boolean",
+      "default": false
+     },
+     {
+      "name": "endpointCapabilities",
+      "type": {
+       "type": "map",
+       "values": "Energistics.Etp.v12.Datatypes.DataValue"
+      },
+      "default": {}
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.RequestSession",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.Uuid",
+     "Energistics.Etp.v12.Datatypes.SupportedProtocol",
+     "Energistics.Etp.v12.Datatypes.SupportedDataObject",
+     "Energistics.Etp.v12.Datatypes.DataValue"
+    ]
+   },
+   "protocol": 0,
+   "messageType": 1,
+   "senderRole": "client"
+  },
+  {
+   "name": "OpenSession",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "OpenSession",
+    "protocol": "0",
+    "messageType": "2",
+    "senderRole": "server",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "applicationName",
+      "type": "string"
+     },
+     {
+      "name": "applicationVersion",
+      "type": "string"
+     },
+     {
+      "name": "serverInstanceId",
+      "type": {
+       "type": "fixed",
+       "namespace": "Energistics.Etp.v12.Datatypes",
+       "name": "Uuid",
+       "size": 16,
+       "fullName": "Energistics.Etp.v12.Datatypes.Uuid",
+       "depends": []
+      }
+     },
+     {
+      "name": "supportedProtocols",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes",
+        "name": "SupportedProtocol",
+        "fields": [
+         {
+          "name": "protocol",
+          "type": "int"
+         },
+         {
+          "name": "protocolVersion",
+          "type": {
+           "type": "record",
+           "namespace": "Energistics.Etp.v12.Datatypes",
+           "name": "Version",
+           "fields": [
+            {
+             "name": "major",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "minor",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "revision",
+             "type": "int",
+             "default": 0
+            },
+            {
+             "name": "patch",
+             "type": "int",
+             "default": 0
+            }
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.Version",
+           "depends": []
+          }
+         },
+         {
+          "name": "role",
+          "type": "string"
+         },
+         {
+          "name": "protocolCapabilities",
+          "type": {
+           "type": "map",
+           "values": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "DataValue",
+            "fields": [
+             {
+              "name": "item",
+              "type": [
+               "null",
+               "boolean",
+               "int",
+               "long",
+               "float",
+               "double",
+               "string",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "boolean"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "boolean"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "int"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "int"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "long"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "long"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfFloat",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "float"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfDouble",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "double"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfString",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "string"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBytes",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "bytes"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+                "depends": []
+               },
+               "bytes",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "AnySparseArray",
+                "fields": [
+                 {
+                  "name": "slices",
+                  "type": {
+                   "type": "array",
+                   "items": {
+                    "type": "record",
+                    "namespace": "Energistics.Etp.v12.Datatypes",
+                    "name": "AnySubarray",
+                    "fields": [
+                     {
+                      "name": "start",
+                      "type": "long"
+                     },
+                     {
+                      "name": "slice",
+                      "type": {
+                       "type": "record",
+                       "namespace": "Energistics.Etp.v12.Datatypes",
+                       "name": "AnyArray",
+                       "fields": [
+                        {
+                         "name": "item",
+                         "type": [
+                          "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                          "bytes"
+                         ]
+                        }
+                       ],
+                       "fullName": "Energistics.Etp.v12.Datatypes.AnyArray",
+                       "depends": [
+                        "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfString"
+                       ]
+                      }
+                     }
+                    ],
+                    "fullName": "Energistics.Etp.v12.Datatypes.AnySubarray",
+                    "depends": [
+                     "Energistics.Etp.v12.Datatypes.AnyArray"
+                    ]
+                   }
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.AnySparseArray",
+                "depends": [
+                 "Energistics.Etp.v12.Datatypes.AnySubarray"
+                ]
+               }
+              ]
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.DataValue",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+             "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+             "Energistics.Etp.v12.Datatypes.ArrayOfString",
+             "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+             "Energistics.Etp.v12.Datatypes.AnySparseArray"
+            ]
+           }
+          },
+          "default": {}
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.SupportedProtocol",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.Version",
+         "Energistics.Etp.v12.Datatypes.DataValue"
+        ]
+       }
+      }
+     },
+     {
+      "name": "supportedDataObjects",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes",
+        "name": "SupportedDataObject",
+        "fields": [
+         {
+          "name": "qualifiedType",
+          "type": "string"
+         },
+         {
+          "name": "dataObjectCapabilities",
+          "type": {
+           "type": "map",
+           "values": "Energistics.Etp.v12.Datatypes.DataValue"
+          },
+          "default": {}
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.SupportedDataObject",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.DataValue"
+        ]
+       }
+      }
+     },
+     {
+      "name": "supportedCompression",
+      "type": "string",
+      "default": ""
+     },
+     {
+      "name": "supportedFormats",
+      "type": {
+       "type": "array",
+       "items": "string"
+      },
+      "default": [
+       "xml"
+      ]
+     },
+     {
+      "name": "currentDateTime",
+      "type": "long"
+     },
+     {
+      "name": "earliestRetainedChangeTime",
+      "type": "long"
+     },
+     {
+      "name": "sessionId",
+      "type": "Energistics.Etp.v12.Datatypes.Uuid"
+     },
+     {
+      "name": "endpointCapabilities",
+      "type": {
+       "type": "map",
+       "values": "Energistics.Etp.v12.Datatypes.DataValue"
+      },
+      "default": {}
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.OpenSession",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.Uuid",
+     "Energistics.Etp.v12.Datatypes.SupportedProtocol",
+     "Energistics.Etp.v12.Datatypes.SupportedDataObject",
+     "Energistics.Etp.v12.Datatypes.DataValue"
+    ]
+   },
+   "protocol": 0,
+   "messageType": 2,
+   "senderRole": "server"
+  },
+  {
+   "name": "CloseSession",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "CloseSession",
+    "protocol": "0",
+    "messageType": "5",
+    "senderRole": "client,server",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "reason",
+      "type": "string",
+      "default": ""
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.CloseSession",
+    "depends": []
+   },
+   "protocol": 0,
+   "messageType": 5,
+   "senderRole": "client,server"
+  },
+  {
+   "name": "ProtocolException",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "ProtocolException",
+    "protocol": "0",
+    "messageType": "1000",
+    "senderRole": "*",
+    "protocolRoles": "client, server",
+    "multipartFlag": true,
+    "fields": [
+     {
+      "name": "error",
+      "type": [
+       "null",
+       {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes",
+        "name": "ErrorInfo",
+        "fields": [
+         {
+          "name": "message",
+          "type": "string"
+         },
+         {
+          "name": "code",
+          "type": "int"
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.ErrorInfo",
+        "depends": []
+       }
+      ]
+     },
+     {
+      "name": "errors",
+      "type": {
+       "type": "map",
+       "values": "Energistics.Etp.v12.Datatypes.ErrorInfo"
+      },
+      "default": {}
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.ProtocolException",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.ErrorInfo"
+    ]
+   },
+   "protocol": 0,
+   "messageType": 1000,
+   "senderRole": "*"
+  },
+  {
+   "name": "Acknowledge",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "Acknowledge",
+    "protocol": "0",
+    "messageType": "1001",
+    "senderRole": "*",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.Acknowledge",
+    "depends": []
+   },
+   "protocol": 0,
+   "messageType": 1001,
+   "senderRole": "*"
+  },
+  {
+   "name": "Ping",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "Ping",
+    "protocol": "0",
+    "messageType": "8",
+    "senderRole": "client,server",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "currentDateTime",
+      "type": "long"
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.Ping",
+    "depends": []
+   },
+   "protocol": 0,
+   "messageType": 8,
+   "senderRole": "client,server"
+  },
+  {
+   "name": "Pong",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.Core",
+    "name": "Pong",
+    "protocol": "0",
+    "messageType": "9",
+    "senderRole": "client,server",
+    "protocolRoles": "client, server",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "currentDateTime",
+      "type": "long"
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.Core.Pong",
+    "depends": []
+   },
+   "protocol": 0,
+   "messageType": 9,
+   "senderRole": "client,server"
+  },
+  {
+   "name": "ChannelMetadata",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.ChannelStreaming",
+    "name": "ChannelMetadata",
+    "protocol": "1",
+    "messageType": "1",
+    "senderRole": "producer",
+    "protocolRoles": "producer,consumer",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "channels",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+        "name": "ChannelMetadataRecord",
+        "fields": [
+         {
+          "name": "uri",
+          "type": "string"
+         },
+         {
+          "name": "id",
+          "type": "long"
+         },
+         {
+          "name": "indexes",
+          "type": {
+           "type": "array",
+           "items": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+            "name": "IndexMetadataRecord",
+            "fields": [
+             {
+              "name": "indexKind",
+              "type": {
+               "type": "enum",
+               "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+               "name": "ChannelIndexKind",
+               "symbols": [
+                "DateTime",
+                "ElapsedTime",
+                "MeasuredDepth",
+                "TrueVerticalDepth",
+                "PassIndexedDepth",
+                "Pressure",
+                "Temperature",
+                "Scalar"
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.ChannelIndexKind",
+               "depends": []
+              },
+              "default": "DateTime"
+             },
+             {
+              "name": "interval",
+              "type": {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes.Object",
+               "name": "IndexInterval",
+               "fields": [
+                {
+                 "name": "startIndex",
+                 "type": {
+                  "type": "record",
+                  "namespace": "Energistics.Etp.v12.Datatypes",
+                  "name": "IndexValue",
+                  "fields": [
+                   {
+                    "name": "item",
+                    "type": [
+                     "null",
+                     "long",
+                     "double",
+                     {
+                      "type": "record",
+                      "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+                      "name": "PassIndexedDepth",
+                      "fields": [
+                       {
+                        "name": "pass",
+                        "type": "long"
+                       },
+                       {
+                        "name": "direction",
+                        "type": {
+                         "type": "enum",
+                         "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+                         "name": "PassDirection",
+                         "symbols": [
+                          "Up",
+                          "HoldingSteady",
+                          "Down"
+                         ],
+                         "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection",
+                         "depends": []
+                        }
+                       },
+                       {
+                        "name": "depth",
+                        "type": "double"
+                       }
+                      ],
+                      "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth",
+                      "depends": [
+                       "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection"
+                      ]
+                     }
+                    ]
+                   }
+                  ],
+                  "fullName": "Energistics.Etp.v12.Datatypes.IndexValue",
+                  "depends": [
+                   "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth"
+                  ]
+                 }
+                },
+                {
+                 "name": "endIndex",
+                 "type": "Energistics.Etp.v12.Datatypes.IndexValue"
+                },
+                {
+                 "name": "uom",
+                 "type": "string"
+                },
+                {
+                 "name": "depthDatum",
+                 "type": "string",
+                 "default": ""
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.Object.IndexInterval",
+               "depends": [
+                "Energistics.Etp.v12.Datatypes.IndexValue"
+               ]
+              }
+             },
+             {
+              "name": "direction",
+              "type": {
+               "type": "enum",
+               "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+               "name": "IndexDirection",
+               "symbols": [
+                "Increasing",
+                "Decreasing",
+                "Unordered"
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.IndexDirection",
+               "depends": []
+              },
+              "default": "Increasing"
+             },
+             {
+              "name": "name",
+              "type": "string",
+              "default": ""
+             },
+             {
+              "name": "uom",
+              "type": "string"
+             },
+             {
+              "name": "depthDatum",
+              "type": "string",
+              "default": ""
+             },
+             {
+              "name": "indexPropertyKindUri",
+              "type": "string"
+             },
+             {
+              "name": "filterable",
+              "type": "boolean",
+              "default": true
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.IndexMetadataRecord",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ChannelData.ChannelIndexKind",
+             "Energistics.Etp.v12.Datatypes.Object.IndexInterval",
+             "Energistics.Etp.v12.Datatypes.ChannelData.IndexDirection"
+            ]
+           }
+          }
+         },
+         {
+          "name": "channelName",
+          "type": "string"
+         },
+         {
+          "name": "dataKind",
+          "type": {
+           "type": "enum",
+           "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+           "name": "ChannelDataKind",
+           "symbols": [
+            "DateTime",
+            "ElapsedTime",
+            "MeasuredDepth",
+            "PassIndexedDepth",
+            "TrueVerticalDepth",
+            "typeBoolean",
+            "typeInt",
+            "typeLong",
+            "typeFloat",
+            "typeDouble",
+            "typeString",
+            "typeBytes"
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.ChannelDataKind",
+           "depends": []
+          }
+         },
+         {
+          "name": "uom",
+          "type": "string"
+         },
+         {
+          "name": "depthDatum",
+          "type": "string"
+         },
+         {
+          "name": "channelClassUri",
+          "type": "string"
+         },
+         {
+          "name": "status",
+          "type": {
+           "type": "enum",
+           "namespace": "Energistics.Etp.v12.Datatypes.Object",
+           "name": "ActiveStatusKind",
+           "symbols": [
+            "Active",
+            "Inactive"
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.Object.ActiveStatusKind",
+           "depends": []
+          }
+         },
+         {
+          "name": "source",
+          "type": "string"
+         },
+         {
+          "name": "axisVectorLengths",
+          "type": {
+           "type": "array",
+           "items": "int"
+          }
+         },
+         {
+          "name": "attributeMetadata",
+          "type": {
+           "type": "array",
+           "items": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "AttributeMetadataRecord",
+            "fields": [
+             {
+              "name": "attributeId",
+              "type": "int"
+             },
+             {
+              "name": "attributeName",
+              "type": "string"
+             },
+             {
+              "name": "dataKind",
+              "type": "Energistics.Etp.v12.Datatypes.ChannelData.ChannelDataKind"
+             },
+             {
+              "name": "uom",
+              "type": "string"
+             },
+             {
+              "name": "depthDatum",
+              "type": "string"
+             },
+             {
+              "name": "attributePropertyKindUri",
+              "type": "string"
+             },
+             {
+              "name": "axisVectorLengths",
+              "type": {
+               "type": "array",
+               "items": "int"
+              }
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.AttributeMetadataRecord",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ChannelData.ChannelDataKind"
+            ]
+           }
+          },
+          "default": []
+         },
+         {
+          "name": "customData",
+          "type": {
+           "type": "map",
+           "values": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "DataValue",
+            "fields": [
+             {
+              "name": "item",
+              "type": [
+               "null",
+               "boolean",
+               "int",
+               "long",
+               "float",
+               "double",
+               "string",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "boolean"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableBoolean",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "boolean"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "int"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableInt",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "int"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "long"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfNullableLong",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": [
+                    "null",
+                    "long"
+                   ]
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfFloat",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "float"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfDouble",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "double"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfString",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "string"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                "depends": []
+               },
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "ArrayOfBytes",
+                "fields": [
+                 {
+                  "name": "values",
+                  "type": {
+                   "type": "array",
+                   "items": "bytes"
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+                "depends": []
+               },
+               "bytes",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes",
+                "name": "AnySparseArray",
+                "fields": [
+                 {
+                  "name": "slices",
+                  "type": {
+                   "type": "array",
+                   "items": {
+                    "type": "record",
+                    "namespace": "Energistics.Etp.v12.Datatypes",
+                    "name": "AnySubarray",
+                    "fields": [
+                     {
+                      "name": "start",
+                      "type": "long"
+                     },
+                     {
+                      "name": "slice",
+                      "type": {
+                       "type": "record",
+                       "namespace": "Energistics.Etp.v12.Datatypes",
+                       "name": "AnyArray",
+                       "fields": [
+                        {
+                         "name": "item",
+                         "type": [
+                          "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                          "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                          "bytes"
+                         ]
+                        }
+                       ],
+                       "fullName": "Energistics.Etp.v12.Datatypes.AnyArray",
+                       "depends": [
+                        "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                        "Energistics.Etp.v12.Datatypes.ArrayOfString"
+                       ]
+                      }
+                     }
+                    ],
+                    "fullName": "Energistics.Etp.v12.Datatypes.AnySubarray",
+                    "depends": [
+                     "Energistics.Etp.v12.Datatypes.AnyArray"
+                    ]
+                   }
+                  }
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.AnySparseArray",
+                "depends": [
+                 "Energistics.Etp.v12.Datatypes.AnySubarray"
+                ]
+               }
+              ]
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.DataValue",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+             "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+             "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+             "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+             "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+             "Energistics.Etp.v12.Datatypes.ArrayOfString",
+             "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+             "Energistics.Etp.v12.Datatypes.AnySparseArray"
+            ]
+           }
+          },
+          "default": {}
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.ChannelMetadataRecord",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.ChannelData.IndexMetadataRecord",
+         "Energistics.Etp.v12.Datatypes.ChannelData.ChannelDataKind",
+         "Energistics.Etp.v12.Datatypes.Object.ActiveStatusKind",
+         "Energistics.Etp.v12.Datatypes.AttributeMetadataRecord",
+         "Energistics.Etp.v12.Datatypes.DataValue"
+        ]
+       }
+      }
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.ChannelStreaming.ChannelMetadata",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.ChannelData.ChannelMetadataRecord"
+    ]
+   },
+   "protocol": 1,
+   "messageType": 1,
+   "senderRole": "producer"
+  },
+  {
+   "name": "ChannelData",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.ChannelStreaming",
+    "name": "ChannelData",
+    "protocol": "1",
+    "messageType": "2",
+    "senderRole": "producer",
+    "protocolRoles": "producer,consumer",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "data",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+        "name": "DataItem",
+        "fields": [
+         {
+          "name": "channelId",
+          "type": "long"
+         },
+         {
+          "name": "indexes",
+          "type": {
+           "type": "array",
+           "items": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "IndexValue",
+            "fields": [
+             {
+              "name": "item",
+              "type": [
+               "null",
+               "long",
+               "double",
+               {
+                "type": "record",
+                "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+                "name": "PassIndexedDepth",
+                "fields": [
+                 {
+                  "name": "pass",
+                  "type": "long"
+                 },
+                 {
+                  "name": "direction",
+                  "type": {
+                   "type": "enum",
+                   "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+                   "name": "PassDirection",
+                   "symbols": [
+                    "Up",
+                    "HoldingSteady",
+                    "Down"
+                   ],
+                   "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection",
+                   "depends": []
+                  }
+                 },
+                 {
+                  "name": "depth",
+                  "type": "double"
+                 }
+                ],
+                "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth",
+                "depends": [
+                 "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection"
+                ]
+               }
+              ]
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.IndexValue",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth"
+            ]
+           }
+          }
+         },
+         {
+          "name": "value",
+          "type": {
+           "type": "record",
+           "namespace": "Energistics.Etp.v12.Datatypes",
+           "name": "DataValue",
+           "fields": [
+            {
+             "name": "item",
+             "type": [
+              "null",
+              "boolean",
+              "int",
+              "long",
+              "float",
+              "double",
+              "string",
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfBoolean",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "boolean"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfNullableBoolean",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": [
+                   "null",
+                   "boolean"
+                  ]
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfInt",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "int"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfNullableInt",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": [
+                   "null",
+                   "int"
+                  ]
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfLong",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "long"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfNullableLong",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": [
+                   "null",
+                   "long"
+                  ]
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfFloat",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "float"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfDouble",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "double"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfString",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "string"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfString",
+               "depends": []
+              },
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "ArrayOfBytes",
+               "fields": [
+                {
+                 "name": "values",
+                 "type": {
+                  "type": "array",
+                  "items": "bytes"
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+               "depends": []
+              },
+              "bytes",
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes",
+               "name": "AnySparseArray",
+               "fields": [
+                {
+                 "name": "slices",
+                 "type": {
+                  "type": "array",
+                  "items": {
+                   "type": "record",
+                   "namespace": "Energistics.Etp.v12.Datatypes",
+                   "name": "AnySubarray",
+                   "fields": [
+                    {
+                     "name": "start",
+                     "type": "long"
+                    },
+                    {
+                     "name": "slice",
+                     "type": {
+                      "type": "record",
+                      "namespace": "Energistics.Etp.v12.Datatypes",
+                      "name": "AnyArray",
+                      "fields": [
+                       {
+                        "name": "item",
+                        "type": [
+                         "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                         "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                         "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                         "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                         "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                         "Energistics.Etp.v12.Datatypes.ArrayOfString",
+                         "bytes"
+                        ]
+                       }
+                      ],
+                      "fullName": "Energistics.Etp.v12.Datatypes.AnyArray",
+                      "depends": [
+                       "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+                       "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+                       "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+                       "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+                       "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+                       "Energistics.Etp.v12.Datatypes.ArrayOfString"
+                      ]
+                     }
+                    }
+                   ],
+                   "fullName": "Energistics.Etp.v12.Datatypes.AnySubarray",
+                   "depends": [
+                    "Energistics.Etp.v12.Datatypes.AnyArray"
+                   ]
+                  }
+                 }
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.AnySparseArray",
+               "depends": [
+                "Energistics.Etp.v12.Datatypes.AnySubarray"
+               ]
+              }
+             ]
+            }
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.DataValue",
+           "depends": [
+            "Energistics.Etp.v12.Datatypes.ArrayOfBoolean",
+            "Energistics.Etp.v12.Datatypes.ArrayOfNullableBoolean",
+            "Energistics.Etp.v12.Datatypes.ArrayOfInt",
+            "Energistics.Etp.v12.Datatypes.ArrayOfNullableInt",
+            "Energistics.Etp.v12.Datatypes.ArrayOfLong",
+            "Energistics.Etp.v12.Datatypes.ArrayOfNullableLong",
+            "Energistics.Etp.v12.Datatypes.ArrayOfFloat",
+            "Energistics.Etp.v12.Datatypes.ArrayOfDouble",
+            "Energistics.Etp.v12.Datatypes.ArrayOfString",
+            "Energistics.Etp.v12.Datatypes.ArrayOfBytes",
+            "Energistics.Etp.v12.Datatypes.AnySparseArray"
+           ]
+          }
+         },
+         {
+          "name": "valueAttributes",
+          "type": {
+           "type": "array",
+           "items": {
+            "type": "record",
+            "namespace": "Energistics.Etp.v12.Datatypes",
+            "name": "DataAttribute",
+            "fields": [
+             {
+              "name": "attributeId",
+              "type": "int"
+             },
+             {
+              "name": "attributeValue",
+              "type": "Energistics.Etp.v12.Datatypes.DataValue"
+             }
+            ],
+            "fullName": "Energistics.Etp.v12.Datatypes.DataAttribute",
+            "depends": [
+             "Energistics.Etp.v12.Datatypes.DataValue"
+            ]
+           }
+          },
+          "default": []
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.DataItem",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.IndexValue",
+         "Energistics.Etp.v12.Datatypes.DataValue",
+         "Energistics.Etp.v12.Datatypes.DataAttribute"
+        ]
+       }
+      }
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.ChannelStreaming.ChannelData",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.ChannelData.DataItem"
+    ]
+   },
+   "protocol": 1,
+   "messageType": 2,
+   "senderRole": "producer"
+  },
+  {
+   "name": "StartStreaming",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.ChannelStreaming",
+    "name": "StartStreaming",
+    "protocol": "1",
+    "messageType": "3",
+    "senderRole": "consumer",
+    "protocolRoles": "producer,consumer",
+    "multipartFlag": false,
+    "fields": [],
+    "fullName": "Energistics.Etp.v12.Protocol.ChannelStreaming.StartStreaming",
+    "depends": []
+   },
+   "protocol": 1,
+   "messageType": 3,
+   "senderRole": "consumer"
+  },
+  {
+   "name": "StopStreaming",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.ChannelStreaming",
+    "name": "StopStreaming",
+    "protocol": "1",
+    "messageType": "4",
+    "senderRole": "consumer",
+    "protocolRoles": "producer,consumer",
+    "multipartFlag": false,
+    "fields": [],
+    "fullName": "Energistics.Etp.v12.Protocol.ChannelStreaming.StopStreaming",
+    "depends": []
+   },
+   "protocol": 1,
+   "messageType": 4,
+   "senderRole": "consumer"
+  },
+  {
+   "name": "TruncateChannels",
+   "schema": {
+    "type": "record",
+    "namespace": "Energistics.Etp.v12.Protocol.ChannelStreaming",
+    "name": "TruncateChannels",
+    "protocol": "1",
+    "messageType": "5",
+    "senderRole": "producer",
+    "protocolRoles": "producer,consumer",
+    "multipartFlag": false,
+    "fields": [
+     {
+      "name": "channels",
+      "type": {
+       "type": "array",
+       "items": {
+        "type": "record",
+        "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+        "name": "TruncateInfo",
+        "fields": [
+         {
+          "name": "channelId",
+          "type": "long"
+         },
+         {
+          "name": "newEndIndex",
+          "type": {
+           "type": "record",
+           "namespace": "Energistics.Etp.v12.Datatypes",
+           "name": "IndexValue",
+           "fields": [
+            {
+             "name": "item",
+             "type": [
+              "null",
+              "long",
+              "double",
+              {
+               "type": "record",
+               "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+               "name": "PassIndexedDepth",
+               "fields": [
+                {
+                 "name": "pass",
+                 "type": "long"
+                },
+                {
+                 "name": "direction",
+                 "type": {
+                  "type": "enum",
+                  "namespace": "Energistics.Etp.v12.Datatypes.ChannelData",
+                  "name": "PassDirection",
+                  "symbols": [
+                   "Up",
+                   "HoldingSteady",
+                   "Down"
+                  ],
+                  "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection",
+                  "depends": []
+                 }
+                },
+                {
+                 "name": "depth",
+                 "type": "double"
+                }
+               ],
+               "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth",
+               "depends": [
+                "Energistics.Etp.v12.Datatypes.ChannelData.PassDirection"
+               ]
+              }
+             ]
+            }
+           ],
+           "fullName": "Energistics.Etp.v12.Datatypes.IndexValue",
+           "depends": [
+            "Energistics.Etp.v12.Datatypes.ChannelData.PassIndexedDepth"
+           ]
+          }
+         }
+        ],
+        "fullName": "Energistics.Etp.v12.Datatypes.ChannelData.TruncateInfo",
+        "depends": [
+         "Energistics.Etp.v12.Datatypes.IndexValue"
+        ]
+       }
+      }
+     }
+    ],
+    "fullName": "Energistics.Etp.v12.Protocol.ChannelStreaming.TruncateChannels",
+    "depends": [
+     "Energistics.Etp.v12.Datatypes.ChannelData.TruncateInfo"
+    ]
+   },
+   "protocol": 1,
+   "messageType": 5,
+   "senderRole": "producer"
+  }
+ ]
+}

@@ -4,7 +4,6 @@
 # the official v1.2 schemas from etptypes (independent of the backend codec).
 #   pip install etptypes==1.2.0 fastavro websockets && python etp12-consumer.py
 # Point the edge at it: ETP_ENABLED=true ETP_URL=ws://<host>:9000 ALLOW_INSECURE_TRANSPORT=true
-# the official v1.2 schemas from etptypes, and enforces spec rules.
 import asyncio, io, json, time, uuid, importlib
 import fastavro, websockets
 

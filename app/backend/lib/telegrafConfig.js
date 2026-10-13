@@ -20,6 +20,7 @@ const RIG_ID_RE = /^[A-Za-z0-9_.\-]{1,64}$/;
 // reject the option or still exit).
 const generateTelegrafConfig = (config, { startupRetry = false } = {}) => {
     let toml = '';
+    const seenTagNames = new Set();
     const retry = startupRetry ? `  startup_error_behavior = "retry"\n` : '';
 
     // Slaves are now treated as "Devices" which can be Modbus or S7comm
@@ -70,6 +71,7 @@ const generateTelegrafConfig = (config, { startupRetry = false } = {}) => {
                 toml += `  ]\n`;
             }
         } else if (protocol === 's7comm') {
+            const seenS7 = seenTagNames;
             // S7 input collection only. CMD-named fields are read-back values.
             toml += '# RIG PLC: read-only S7 input collection, including CMD tag read-back.\n';
             toml += `[[inputs.s7comm]]\n`;
@@ -78,13 +80,17 @@ const generateTelegrafConfig = (config, { startupRetry = false } = {}) => {
             toml += `  slot = ${slave.slot || 0}\n`;
             toml += retry;
 
-            // S7comm uses metrics which group fields together
+            // S7comm uses metrics which group fields together. A tag name listed
+            // twice is read once (first wins, as in lib/telemetryMap.js); reading it
+            // again would store two rows per second for the same metric.
             if (slave.metrics && slave.metrics.length > 0) {
                 slave.metrics.forEach(metric => {
                     toml += `  [[inputs.s7comm.metric]]\n`;
                     toml += `    name = "${metric.name || 'AHWR'}"\n`;
                     toml += `    fields = [\n`;
                     metric.fields.forEach(f => {
+                        if (seenS7.has(f.name)) return;
+                        seenS7.add(f.name);
                         toml += `      {name="${f.name}", address="${f.address}"},\n`;
                     });
                     toml += `    ]\n`;

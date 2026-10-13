@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { buildMapping, mapPoint, isBooleanMetric, starlarkSource } = require('../lib/telemetryMap');
-const { buildManagedConfig, writeManagedConfig, assertRigId } = require('../lib/telegrafConfig');
+const { generateTelegrafConfig, buildManagedConfig, writeManagedConfig, assertRigId } = require('../lib/telegrafConfig');
 const { durationToInterval, timeBound } = require('../lib/tsdb');
 const { splitCsvLine, cleanLabel } = require('../lib/wellArchive');
 const { validatePlcConfig } = require('../lib/validate');
@@ -74,6 +74,16 @@ test('managed plc.conf: rig_id tag, starlark processor, inputs; rewritten only o
   assert.doesNotMatch(other, /startup_error_behavior/);
   const { conf: retry } = buildManagedConfig(cfg, { rigId: 'AHWR-50-III', starPath: '/x/ahwr-telemetry.star', startupRetry: true });
   assert.match(retry, /\[\[inputs\.s7comm\]\]\n  server = "10\.0\.0\.5:102"\n  rack = \d+\n  slot = \d+\n  startup_error_behavior = "retry"\n/);
+});
+
+test('a PLC tag listed twice is read once (first wins)', () => {
+  const twice = { slaves: [{ name: 'S7', protocol: 's7comm', ip: '10.0.0.5', metrics: [
+    { name: 'AHWR', fields: [{ name: 'ACS Crownsaver in mm', address: 'DB65.R6' }, { name: 'Hook', address: 'DB1.R0' }] },
+    { name: 'AHWR', fields: [{ name: 'ACS Crownsaver in mm', address: 'DB65.R6' }] },
+  ] }] };
+  const toml = generateTelegrafConfig(twice);
+  assert.equal(toml.match(/ACS Crownsaver in mm/g).length, 1);
+  assert.equal(toml.match(/address=/g).length, 2);
 });
 
 test('rig id and Modbus slaveId cannot inject TOML', () => {

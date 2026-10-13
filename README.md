@@ -50,8 +50,12 @@ Apply-Settings, Check-Health, Update (rolls back on failure), Backup-Now,
 Restore-Records, Collect-Logs, Uninstall. Build it with
 `installer/build.sh <components-dir> <output-dir> [version]` from a clean commit;
 the components are pinned and verified by `installer/components.lock.json`.
-`installer/README.txt` is the engineer's sheet; tests:
-`pwsh -File installer/test/setup.tests.ps1 [<built package>]`.
+`installer/README.txt` is the engineer's sheet. Tests without Windows:
+`pwsh -File installer/test/setup.tests.ps1 [<built package>]` (syntax, PowerShell 5.1
+compatibility, module functions, the real components unpacked) and
+`pwsh -File installer/test/dryrun.ps1 <built package>` (install, repair, every tool,
+a failing update that rolls back, uninstall, reinstall, purge; Windows-only commands
+simulated).
 
 ## First deployment
 

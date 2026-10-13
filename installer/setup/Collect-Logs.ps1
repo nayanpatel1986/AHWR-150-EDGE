@@ -48,7 +48,7 @@ try {
     $info += @('', 'Services:')
     $info += @(Get-CimInstance Win32_Service | Where-Object { $_.Name -like 'AHWR*' } | ForEach-Object { '  {0,-20} {1,-8} {2,-7} {3}' -f $_.Name, $_.State, $_.StartMode, $_.PathName })
     $info += @('', 'Listening ports:')
-    $info += @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in @(5432, 8080, 8186, 8888) } | ForEach-Object { '  {0}:{1} pid {2}' -f $_.LocalAddress, $_.LocalPort, $_.OwningProcess })
+    $info += @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_ -and $_.LocalPort -in @(5432, 8080, 8186, 8888) } | ForEach-Object { '  {0}:{1} pid {2}' -f $_.LocalAddress, $_.LocalPort, $_.OwningProcess })
     $info += @('', 'Firewall rules (AHWR-EDGE):')
     $info += @(Get-NetFirewallRule -Group $AhwrFirewallGroup -ErrorAction SilentlyContinue | ForEach-Object { '  {0} {1} {2}' -f $_.DisplayName, $_.Action, $_.Enabled })
     Write-Utf8File (Join-Path $work 'system.txt') $info
@@ -57,7 +57,7 @@ try {
     try { Invoke-SelfTest $Root } catch { Add-Check 'Self-test' 'FAILED' $_.Exception.Message }
     Write-SetupReport (Join-Path $work 'health.html') 'AHWR-150 EDGE health check' 'collected for support' ([ordered]@{ 'Rig (DeviceId)' = $rig })
 
-    $zip = Join-Path ([Environment]::GetFolderPath('Desktop')) "AHWR-logs-$rig-$stamp.zip"
+    $zip = Join-Path ((Get-DesktopPath)) "AHWR-logs-$rig-$stamp.zip"
     Compress-Archive -Path (Join-Path $work '*') -DestinationPath $zip -Force
     Remove-Item -LiteralPath $work -Recurse -Force
     Write-Host ''

@@ -52,7 +52,7 @@ Write-Host 'Do not close this window or restart the PC while it runs.'
 try {
     # ------------------------------------------------------------------ 1
     Invoke-Stage 1 $Total 'Pre-checks' {
-        Add-Check 'Administrator rights' 'OK' ([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+        Add-Check 'Administrator rights' 'OK' (Get-CurrentUserName)
         $os = Get-CimInstance Win32_OperatingSystem
         if (-not [Environment]::Is64BitOperatingSystem) { Add-Check 'Windows' 'FAILED' 'a 64-bit Windows is required' }
         elseif ([int]$os.BuildNumber -lt 17763) { Add-Check 'Windows' 'FAILED' "$($os.Caption) build $($os.BuildNumber): Windows 10 1809 or later is required" }
@@ -76,17 +76,17 @@ try {
         $drive = (Get-IniValue $state.Ini 'Rig' 'DataDrive' 'D:').ToUpperInvariant()
         $disk = $null
         if ($drive -match '^[A-Z]:$') { $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$drive'" }
-        if (-not $disk) { Add-Check "Data drive $drive" 'FAILED' 'not found: set [Rig] DataDrive to an existing drive (C: on a single-disk test PC)' }
-        elseif ($disk.DriveType -ne 3) { Add-Check "Data drive $drive" 'FAILED' 'not a local fixed disk' }
+        if (-not $disk) { Add-Check 'Data drive' 'FAILED' "$drive not found: set [Rig] DataDrive to an existing drive (C: on a single-disk test PC)" }
+        elseif ($disk.DriveType -ne 3) { Add-Check 'Data drive' 'FAILED' "$drive is not a local fixed disk" }
         else {
             $freeGb = [Math]::Round($disk.FreeSpace / 1GB)
             $existingDb = Test-Path -LiteralPath (Join-Parts "$drive\AHWR" 'data' 'pgdata' 'PG_VERSION')
-            if ($freeGb -lt 20) { Add-Check "Data drive $drive" 'FAILED' "$freeGb GB free" }
-            elseif (-not $existingDb -and $freeGb -lt 500) { Add-Check "Data drive $drive" $short "$freeGb GB free; at least 500 GB is needed for 90 days of raw PLC data" }
-            else { Add-Check "Data drive $drive" 'OK' "$freeGb GB free" }
+            if ($freeGb -lt 20) { Add-Check "Data drive" 'FAILED' "$drive $freeGb GB free" }
+            elseif (-not $existingDb -and $freeGb -lt 500) { Add-Check "Data drive" $short "$drive $freeGb GB free; at least 500 GB is needed for 90 days of raw PLC data" }
+            else { Add-Check "Data drive" 'OK' "$drive $freeGb GB free" }
         }
         $sys = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$($Root.Substring(0, 2))'"
-        if ($sys -and $sys.FreeSpace -lt 10GB) { Add-Check "Program drive $($Root.Substring(0, 2))" 'FAILED' "$([Math]::Round($sys.FreeSpace / 1GB)) GB free; 10 GB needed" }
+        if ($sys -and $sys.FreeSpace -lt 10GB) { Add-Check 'Program drive' 'FAILED' "$($Root.Substring(0, 2)) $([Math]::Round($sys.FreeSpace / 1GB)) GB free; 10 GB needed" }
 
         try {
             $av = @(Get-CimInstance -Namespace 'root/SecurityCenter2' -ClassName AntiVirusProduct -ErrorAction Stop)
@@ -444,7 +444,7 @@ try {
 } finally {
     $credentials = $null
     if ($exitCode -eq 0 -and $state.AdminPassword) {
-        $credentials = Join-Path ([Environment]::GetFolderPath('Desktop')) "AHWR-credentials-$($state.Values.DeviceId).txt"
+        $credentials = Join-Path ((Get-DesktopPath)) "AHWR-credentials-$($state.Values.DeviceId).txt"
         Write-Utf8File $credentials @(
             "AHWR-150 EDGE $($state.Values.DeviceId) - created $(Get-Date -Format 'yyyy-MM-dd HH:mm')",
             'Move these into the asset password safe, then delete this file.', '',
@@ -453,7 +453,7 @@ try {
             "Web admin password:  $($state.AdminPassword)   (change it at the first sign-in)",
             "Database superuser:  postgres / $($state.Settings['PG_SUPERUSER_PASSWORD'])",
             'All other internal passwords are in C:\AHWR\settings.env (administrators only).')
-        & icacls.exe $credentials /inheritance:r /grant:r "*$([Security.Principal.WindowsIdentity]::GetCurrent().User.Value):F" /C /Q | Out-Null
+        & icacls.exe $credentials /inheritance:r /grant:r "*$(Get-CurrentUserSid):F" /C /Q | Out-Null
     }
     $facts = [ordered]@{ 'Installer version' = $Version; 'Computer' = $env:COMPUTERNAME }
     if ($state.Values) { $facts['Rig (DeviceId)'] = $state.Values.DeviceId }

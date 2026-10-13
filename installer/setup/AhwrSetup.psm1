@@ -39,6 +39,10 @@ function Join-Parts([string]$Base) {
     return $path
 }
 
+function Get-DesktopPath { return [Environment]::GetFolderPath('Desktop') }
+function Get-CurrentUserName { return [Security.Principal.WindowsIdentity]::GetCurrent().Name }
+function Get-CurrentUserSid { return [Security.Principal.WindowsIdentity]::GetCurrent().User.Value }
+
 function Test-IsAdministrator {
     $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -142,14 +146,21 @@ tr.OK b{color:#2b7a4b}tr.WARNING b{color:#a05f00}tr.FAILED b{color:#b3261e}tr.IN
 }
 
 # --- Files ---------------------------------------------------------------------------
+function Resolve-FsPath([string]$Path) {
+    # A full file-system path for .NET calls (PowerShell drives and relative paths resolved).
+    return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+}
+
 function Write-Utf8File([string]$Path, [string[]]$Lines) {
     # UTF-8 without BOM, CRLF line ends.
+    $Path = Resolve-FsPath $Path
     $text = ($Lines -join "`r`n") + "`r`n"
     [IO.File]::WriteAllText($Path, $text, (New-Object Text.UTF8Encoding($false)))
 }
 
 function Read-IniFile([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { throw "Settings file not found: $Path" }
+    $Path = Resolve-FsPath $Path
     $ini = @{}
     $section = ''
     $lineNo = 0
@@ -180,6 +191,7 @@ function Get-IniValue($Ini, [string]$Section, [string]$Key, [string]$Default = '
 
 function Set-IniValue([string]$Path, [string]$Section, [string]$Key, [string]$Value) {
     # Rewrite one value in place, keeping comments and layout.
+    $Path = Resolve-FsPath $Path
     $lines = [IO.File]::ReadAllLines($Path)
     $current = ''
     for ($i = 0; $i -lt $lines.Length; $i++) {
@@ -213,6 +225,7 @@ function Clear-IniSecrets([string]$Path) {
 function Read-EnvFile([string]$Path) {
     $values = [ordered]@{}
     if (-not (Test-Path -LiteralPath $Path)) { return $values }
+    $Path = Resolve-FsPath $Path
     foreach ($raw in [IO.File]::ReadAllLines($Path)) {
         $line = $raw.TrimStart([char]0xFEFF)
         if ($line -match '^\s*([^#=]+)=(.*)$') { $values[$matches[1].Trim()] = $matches[2] }
@@ -222,6 +235,7 @@ function Read-EnvFile([string]$Path) {
 
 function Update-EnvFile([string]$Path, $Updates, [string[]]$Remove = @(), [string]$Header = '# Added by the AHWR-EDGE installer') {
     # Set KEY=value lines in place; append keys that are new; keep comments and order.
+    $Path = Resolve-FsPath $Path
     $lines = New-Object System.Collections.ArrayList
     if (Test-Path -LiteralPath $Path) { foreach ($l in [IO.File]::ReadAllLines($Path)) { $null = $lines.Add($l.TrimStart([char]0xFEFF)) } }
     $done = @{}
@@ -247,6 +261,7 @@ function Update-EnvFile([string]$Path, $Updates, [string[]]$Remove = @(), [strin
 
 function Copy-SharedFile([string]$Source, [string]$Destination) {
     # Copy a file another process still has open for writing (service logs).
+    $Source = Resolve-FsPath $Source; $Destination = Resolve-FsPath $Destination
     $in = [IO.File]::Open($Source, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
     try {
         $out = [IO.File]::Create($Destination)
@@ -456,7 +471,7 @@ function Get-PortOwner([int]$Port) {
 # --- Package checksums --------------------------------------------------------------------------
 function Get-PackageChecksumProblems([string]$PackageRoot) {
     $problems = New-Object System.Collections.ArrayList
-    $sumFile = Join-Path $PackageRoot 'SHA256SUMS.txt'
+    $sumFile = Resolve-FsPath (Join-Path $PackageRoot 'SHA256SUMS.txt')
     if (-not (Test-Path -LiteralPath $sumFile)) { $null = $problems.Add('SHA256SUMS.txt is missing'); return @($problems) }
     $sep = [IO.Path]::DirectorySeparatorChar
     foreach ($line in [IO.File]::ReadAllLines($sumFile)) {
@@ -472,7 +487,8 @@ function Get-PackageChecksumProblems([string]$PackageRoot) {
 # --- Components ---------------------------------------------------------------------------------
 function Expand-ZipTo([string]$ZipPath, [string]$Destination, [string]$StripPrefix = '', [string[]]$ExcludePrefixes = @(), [string[]]$OnlyPrefixes = @()) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $root = [IO.Path]::GetFullPath($Destination).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+    $ZipPath = Resolve-FsPath $ZipPath
+    $root = (Resolve-FsPath $Destination).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
     $null = New-Item -ItemType Directory -Force -Path $root
     $ic = [StringComparison]::OrdinalIgnoreCase
     $zip = [IO.Compression.ZipFile]::OpenRead($ZipPath)
@@ -571,7 +587,7 @@ function Set-RestrictedAcl([string]$Path, [string[]]$ReadSids = @()) {
     # Administrators, SYSTEM and the installing user: full control. Service accounts: read.
     # The installing user stays listed because PostgreSQL's initdb and pg_ctl drop
     # administrator rights and still need to write the database folder.
-    $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $me = Get-CurrentUserSid
     & icacls.exe $Path /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' "*${me}:(OI)(CI)F" /C /Q | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Could not set the access rights of $Path." }
     foreach ($sid in $ReadSids) {

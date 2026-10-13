@@ -100,7 +100,7 @@ if ($pgMode -eq 'bundled') {
     Start-Service $pgService
     Write-Host "Registered $pgService (PostgreSQL + TimescaleDB, data\pgdata)."
 } else {
-    $pgService = if ($settings['PG_SERVICE_NAME']) { $settings['PG_SERVICE_NAME'] } else { 'postgresql-x64-16' }
+    $pgService = if ($settings['PG_SERVICE_NAME']) { $settings['PG_SERVICE_NAME'] } else { 'postgresql-x64-18' }
     if (-not (Get-Service $pgService -ErrorAction SilentlyContinue)) { throw "PostgreSQL service '$pgService' not found. Set PG_SERVICE_NAME in settings.env." }
     Set-Service $pgService -StartupType Automatic
 }

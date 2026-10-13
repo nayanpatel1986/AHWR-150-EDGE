@@ -31,9 +31,10 @@ exceed GitHub's normal file-size limits. Keep it in the secured offline transfer
 image: `runtime\node`, `runtime\python`, `runtime\telegraf` (1.32 or later, so
 Telegraf keeps retrying a PLC that is unreachable at start; 1.29+ still runs),
 `runtime\nssm\nssm.exe` (NSSM 2.24, win64, for the Windows services) and, for
-`PG_MODE=bundled`, `runtime\pgsql` (PostgreSQL 15/16 for Windows with the
-TimescaleDB files matching the CMF's version). For `PG_MODE=service`, install
-PostgreSQL + TimescaleDB as described in the Edge Installation Guide instead.
+`PG_MODE=bundled`, `runtime\pgsql` (PostgreSQL 18 for Windows with the
+TimescaleDB 2.30.2 files from `timescaledb-postgresql-18-windows-amd64.zip`).
+For `PG_MODE=service`, install PostgreSQL 18 + TimescaleDB as described in the
+Edge Installation Guide instead.
 
 ## First deployment
 

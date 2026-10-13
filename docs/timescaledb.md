@@ -77,6 +77,22 @@ Roles (`01-roles.sql`): `telegraf_writer` — INSERT on `telemetry` only;
 `ahwr_app` — the backend (read telemetry/rollups, write derived telemetry,
 events, wells/runs, tags, imports, operating records); `postgres` — schema only.
 
+## Versions
+
+The edge runs **PostgreSQL 18.6 + TimescaleDB 2.30.2** (both the latest releases
+on 2026-10-13). The schema, rollups, policies, records store and backup/restore
+were re-tested on it: all six background jobs succeed and the live pipeline
+reaches 519 metrics/s. The measurements below were taken earlier on PostgreSQL
+15 + TimescaleDB 2.28.3.
+
+The CMF (`central/`) still runs `timescale/timescaledb:2.28.3-pg15`. The tables
+are the same, so sync and replay are unaffected, but TimescaleDB releases after
+2.28 no longer support PostgreSQL 15: move the CMF to PostgreSQL 18 when it is
+next upgraded (dump and restore, or `pg_upgrade`).
+
+Docker: the PostgreSQL 18 images keep data in `/var/lib/postgresql/18/docker`, so
+the `pgdata` volume is mounted at `/var/lib/postgresql` (not `.../data`).
+
 ## Measured on the test stack (Docker Desktop, Apple Silicon)
 
 | | |
@@ -94,8 +110,9 @@ events, wells/runs, tags, imports, operating records); `postgres` — schema onl
 
 `PG_MODE` in `settings.env` selects how PostgreSQL runs:
 
-* `bundled` — `runtime\pgsql` holds PostgreSQL 15/16 for Windows with the
-  TimescaleDB files copied into `lib` and `share\extension`. On first start the
+* `bundled` — `runtime\pgsql` holds PostgreSQL 18 for Windows (the EDB binaries
+  zip) with the TimescaleDB 2.30.2 files (`timescaledb-postgresql-18-windows-amd64.zip`)
+  copied into `lib` and `share\extension`. On first start the
   script runs `initdb` into `data\pgdata` (scram-sha-256, `listen_addresses =
   '127.0.0.1'`, `shared_preload_libraries = 'timescaledb'`, telemetry off), starts
   it with `pg_ctl`, and applies `app\sql` (idempotent) on every start.
@@ -131,7 +148,7 @@ It needs `nssm.exe` (NSSM 2.24, win64) in `runtime\nssm\` and registers:
 | `AHWR-BOP-Collector` | `python collector.py` | Telegraf |
 
 With `PG_MODE=service` the installed PostgreSQL service is used instead (name
-from `PG_SERVICE_NAME`, default `postgresql-x64-16`) and set to automatic start.
+from `PG_SERVICE_NAME`, default `postgresql-x64-18`) and set to automatic start.
 
 All services start at boot without anyone signing in and are restarted 5 s after
 they stop. They run as the built-in low-privilege `LocalService` account
@@ -175,7 +192,7 @@ coming up, without a restart.
 | 4.5 `01-roles.sql` creates schemas `raw`/`app` | `app/sql/01-roles.sql` + `02-schema.sql`; `telegraf_writer` gets INSERT on `telemetry` only, no CREATE |
 | 5.2 `create_templates` | Telegraf only inserts (`create_templates = []`, `add_column_templates = []`, `timestamp_column_name = "ts"`, timestamptz) |
 | 5.2 / 7.3 hand-edit the `rig` tag in telegraf.conf | `rig_id` is written into `plc.conf` from `DEVICE_ID`; no hand edit |
-| 4.x PostgreSQL 16 | Tested on PostgreSQL 15 + TimescaleDB 2.28.3 (the CMF's versions); match the CMF's TimescaleDB version |
+| 4.x PostgreSQL 16 | **PostgreSQL 18** (latest stable; 19 is in beta) + **TimescaleDB 2.30.2** (latest), Docker image `timescale/timescaledb:2.30.2-pg18`; Windows: PostgreSQL 18 with `timescaledb-postgresql-18-windows-amd64.zip`. TimescaleDB 2.30 supports PostgreSQL 16–18 only. |
 | 8 checks: jobs per `raw` table; `SELECT max(time) FROM raw.<m>` | Jobs: `telemetry` compression + retention, `telemetry_1m` refresh + compression; fresh data: `SELECT max(ts) FROM telemetry WHERE rig_id = '<DEVICE_ID>'` |
 
 | NSSM Windows services | `Install-AHWR-EDGE-Services.ps1` (above): same service layout, secrets read from `settings.env`, low-privilege account, daily records backup |
@@ -225,8 +242,9 @@ pg_restore -h 127.0.0.1 -U postgres -d ahwr_edge --data-only --disable-triggers 
 Start-Service AHWR-Backend, AHWR-BOP-Collector
 ```
 
-(Tested on TimescaleDB 2.28.3: all documents, wells, runs, tags and the run id
-sequence restored into a freshly initialised database.)
+(Tested on PostgreSQL 18.6 + TimescaleDB 2.30.2 and on 15 + 2.28.3: all
+documents, wells, runs, tags and the run id sequence restored into a freshly
+initialised database.)
 
 ## Operations
 

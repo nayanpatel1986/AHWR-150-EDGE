@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 # PostgreSQL + TimescaleDB runs in one of two modes (PG_MODE in settings.env):
 #   bundled  runtime\pgsql is initialised in data\pgdata and started/stopped by
 #            these scripts (portable folder, the default when runtime\pgsql exists)
-#   service  an installed PostgreSQL 15/16 Windows service with TimescaleDB, as in
+#   service  an installed PostgreSQL 18 Windows service with TimescaleDB, as in
 #            the Edge Installation Guide; this script only connects to it
 #
 # After Install-AHWR-EDGE-Services.ps1 everything runs as Windows services that

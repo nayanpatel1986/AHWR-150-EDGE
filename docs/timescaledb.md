@@ -68,6 +68,8 @@ backend live view (1 Hz) ◀── latest value per metric over the last 10 s
 | `telemetry_import`, `telemetry_imports` | edge | imported CSV/JSON history, never mixed with live data |
 | `telemetry_1m_legacy`, `telemetry_1m_all` (view) | edge | 1-minute history migrated from InfluxDB for periods with no raw data |
 | `app.documents (name, body jsonb, version, updated_at)` | edge | operating records, one row per former JSON file; daily backup (below) |
+| `channels (rig_id, metric, uuid, mnemonic, uom, factor, property_kind…)` | CMF (schema 3) | the channel dictionary: Energistics identity, unit and PWLS property kind of every metric, with its data extent (`first_ts`, `last_ts`); see `witsml-interchange.md` |
+| `wellbores`; `uuid` on `rigs`, `wells`, `well_runs` | CMF (schema 3) | WITSML 2.1 identifiers (name-based UUIDs, the same at the edge and the CMF) |
 
 Differences from the CMF are deliberate: retention/compression sized for one PC,
 and **no UNIQUE index on `telemetry`** (replay de-duplication is the CMF's job; a
@@ -75,7 +77,8 @@ unique violation would make Telegraf drop a whole batch).
 
 Roles (`01-roles.sql`): `telegraf_writer` — INSERT on `telemetry` only;
 `ahwr_app` — the backend (read telemetry/rollups, write derived telemetry,
-events, wells/runs, tags, imports, operating records); `postgres` — schema only.
+events, wells/runs/wellbores, tags, channels, imports, operating records);
+`postgres` — schema only.
 
 ## Versions
 
@@ -176,8 +179,12 @@ every 5 s instead.
 ### Docker (`docker-compose.yml`)
 
 `docker compose up -d --build` with a `.env` (see the file header). The database
-is initialised by `app/sql/docker-init.sh`; the backend and Telegraf share the
-`telegraf.d` volume. Telegraf is 1.36.4 with startup retry: on the test stack it
+is initialised by `app/sql/docker-init.sh`; the one-shot `db-migrate` service
+(`app/sql/docker-migrate.sh`) re-applies `app/sql` on every start, so an existing
+database is upgraded before the backend starts. The backend and Telegraf share the
+`telegraf.d` volume. A PLC tag listed twice in the PLC configuration is read once
+(the shipped default listed four ACS tags twice, which stored two rows per second
+for those metrics). Telegraf is 1.36.4 with startup retry: on the test stack it
 ran with the PLC unreachable and collected 519 metrics/s within 10 s of the PLC
 coming up, without a restart.
 

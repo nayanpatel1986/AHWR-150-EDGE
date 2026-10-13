@@ -2,8 +2,8 @@
 
 Scope: which data held by the AHWR-150 edge (TimescaleDB historian + operating
 records) can be represented in Energistics WITSML for exchange with operators,
-service companies and the CMF, which WITSML object fits each, what the
-`/api/witsml/*` export produces, and the edge's ETP v1.2 publisher. Element names
+service companies and the CMF, which WITSML object fits each, what the WITSML
+1.4.1.1 and 2.1 exports produce, and the edge's ETP v1.2 client. Element names
 marked *verify* in the mapping table are for objects the edge does not export yet.
 
 ## Versions to target
@@ -18,10 +18,60 @@ There is no "ETP 2.0" or "ETP 2.2": v1.2 is the current ETP release. The edge
 publisher and its screen were labelled "ETP 2.0" and sent hand-made JSON; they now
 implement ETP v1.2 (below).
 
-Recommendation: export **WITSML 1.4.1.1 files** (wells, wellbores, logs,
-messages, opsReports) from the edge for offline hand-over, and let the **CMF**
-serve WITSML 2.1 / ETP v1.2 to external consumers from its TimescaleDB (its
-`crmf-etp-witsml` contract), since the edge now stores the same telemetry model.
+How the pieces fit:
+
+* The edge keeps the Energistics **identity** of everything it records (below) and
+  exports **WITSML 1.4.1.1** files (wells, wellbores, logs, messages, opsReports)
+  and **WITSML 2.1** objects for offline hand-over.
+* The edge **loads the CMF** over ETP v1.2 (Store + ChannelDataLoad, lossless) and/or
+  the HTTP sync, which now carries the channel dictionary.
+* The **CMF** serves WITSML 2.1 over ETP v1.2 to external consumers
+  (`central/etp-witsml`: Discovery, Store, ChannelSubscribe, ChannelDataFrame).
+
+## Energistics identity and channel metadata (`lib/ids.js`, `lib/channels.js`)
+
+Every object has an RFC 4122 version-5 UUID computed the same way at the edge and
+the CMF, so both refer to the same rig, well, run and channel without exchanging
+identifiers: `uuid5(NAMESPACE, "<kind>:<key>")`, NAMESPACE =
+`uuid5(NAMESPACE_URL, "urn:ahwr:energyml")` = `0c778a8a-d94f-55c2-9951-37777e6d4d11`;
+keys: `rig:<rig>`, `well:<well>`, `wellbore:<well>:1`,
+`rigutilization|log|channelset:<rig>:<well>:<run start>`, `channel:<rig>:<metric>`,
+`businessassociate:<name>`.
+
+The channel dictionary (table `channels`, `GET /api/channels`) gives each recorded
+metric (≈ 580: the EDR catalog, the PLC field map and unmapped PLC tags):
+
+| Field | |
+|---|---|
+| mnemonic | standard drilling mnemonic (HKLA, SPPA, TQA, …) or a unique one ≤ 32 characters |
+| uom | Energistics unit symbol of the presented values (validated against the common v2.3 unit list) |
+| storedUnit, factor | the historian's unit, presented = stored × factor (standpipe pressure: bar → psi) |
+| propertyKind | Energistics PWLS property kind (uuid, title) from the official PropertyKindDictionary v2.3 (`lib/propertyKinds.json`, built by `test/tools/pwls-extract.py`) |
+| unitSource | how the unit was found: `catalog`, `plc-bit` (S7 `.X` addresses, Modbus coils, BOP limit switches → `Euc`, property kind *flag*), `plc-enum-flag` / `status` (enumerations in the PLC tag name, e.g. `0=NORMAL, 1=ESD ACTIVE`), `label` (a unit written in the PLC tag name, e.g. `-bar`, `in mm`), or `unknown` |
+
+With the shipped PLC configuration (578 channels): 95 catalog units, 261 PLC bits,
+79 units written in tag names, 70 status codes, 12 two-state enumerations and
+**61 unknown**. Unknown units are published as
+`Euc` with the PWLS property kind *unknown* rather than guessed; list them with
+`GET /api/channels?unitSource=unknown` and add the unit to the EDR catalog.
+
+PWLS assigns every torque kind to the *energy* quantity class and stroke rate to
+*frequency*; the edge keeps the physical units `daN.m` (moment of force) and
+`1/min` (reciprocal time), both valid Energistics symbols of the same dimension.
+
+## WITSML 2.1 export (`lib/witsml21.js`, `/api/witsml21/*`)
+
+| Endpoint | Object |
+|---|---|
+| `/api/witsml21/well`, `wellbore` | Well (UWI as NumGovt, field, country, time zone, operator as BusinessAssociate, status, spud) and its Wellbore (measured/bit/planned depth) |
+| `/api/witsml21/rig`, `rigutilization` | the Rig, and the run of the well on this rig (start/end, Wellbore and Rig references) |
+| `/api/witsml21/channel?metric=` | one Channel: mnemonic, global mnemonic, data kind, Energistics unit, PWLS ChannelPropertyKind, LoggingCompany (`WITSML_LOGGING_COMPANY`, default the rig), time index with the channel's data extent |
+| `/api/witsml21/log`, `channelset?data=1` | the run's Log (a ChannelSet with every channel) or the ChannelSet with its data in the WITSML JSON row form, presented units, `null` for missing values (`start`/`stop`/`metrics`, at most `WITSML_MAX_ROWS`) |
+| `/api/witsml21/objects`, `object/<uuid>` | every published object, and any one by uuid (PropertyKind, BusinessAssociate included) |
+
+`test/witsml21.test.cjs` validates every object type against the official WITSML
+2.1 / common 2.3 XSDs (`WITSML21_XSD_DIR`); on the test stack all 630 objects
+(578 channels) and a ChannelSet with live data validated.
 
 ## Mapping
 
@@ -101,43 +151,62 @@ limits saved earlier in bar are converted once to the same thresholds), the
 maintenance view, the WITSML log (`mudpump.pressure` and `delta_pressure`
 curves, including 1-minute min/max) and the ETP stream (`lib/units.js`).
 
-## ETP v1.2 publisher (`lib/etp.js`)
+## ETP v1.2 client (`lib/etp.js`)
 
-The edge can stream live telemetry to an ETP v1.2 store (Settings > Edge Sync >
-ETP; `ETP_ENABLED`, `ETP_URL`, `ETP_STREAM_SECONDS`). It is a **ChannelStreaming
-(Protocol 1) producer**:
+Settings > Edge Sync > ETP (`ETP_ENABLED`, `ETP_URL`, `ETP_MODE`, `ETP_AUTH`,
+`ETP_BACKFILL_HOURS`, `ETP_STREAM_SECONDS`). WebSocket subprotocol
+`etp12.energistics.org`, header `etp-encoding: binary`, binary Avro with the
+official v1.2 schemas (`lib/etp12/schemas.json`: Core, ChannelStreaming,
+ChannelDataFrame, Discovery, Store, ChannelSubscribe, ChannelDataLoad, extracted
+from the Apache-2.0 `etptypes` package by `test/tools/etp12-extract-schemas.py`).
+Client message ids are non-zero, even and increasing; every message carries FIN;
+`wss://` is required except on loopback or with `ALLOW_INSECURE_TRANSPORT=true`.
+Authorization: `Basic <DEVICE_ID>:<token>` (the CMF's per-rig credential) or
+`Bearer <token>`.
 
-* WebSocket subprotocol `etp12.energistics.org`, header `etp-encoding: binary`;
-  messages are binary Avro encoded with the official v1.2 schemas
-  (`lib/etp12/schemas.json`, extracted from the Apache-2.0 `etptypes` package
-  by `test/tools/etp12-extract-schemas.py`). `wss://` is required except on
-  loopback or with `ALLOW_INSECURE_TRANSPORT=true`.
-* Session: `RequestSession` asking for Protocol 1 with the server in the
-  `consumer` role → `OpenSession`; non-zero, even, increasing message ids; the
-  FIN flag on every message; `Ping` is answered with `Pong`; `CloseSession` on
-  disconnect.
-* Streaming starts when the consumer sends `StartStreaming`: `ChannelMetadata`
-  (one channel per metric, deterministic name-based UUIDs, the WITSML mnemonic as
-  channel name, Energistics units, time index in UTC microseconds) and then
-  `ChannelData` every `ETP_STREAM_SECONDS`. New metrics are announced before
-  their first value; `StopStreaming` stops it.
-* Read-only by design: the edge produces data and never accepts writes.
+**Store mode (default, for the CMF).** The ETP v1.2 spec reserves ChannelStreaming
+for "simple streamers" without delivery guarantees and requires ChannelSubscribe /
+ChannelDataLoad when data must not be lost. In store mode the edge is the
+*customer* of a store:
 
-Conformance: an independent consumer written against the same schemas with
-`fastavro` (`test/tools/etp12-consumer.py`) checks the session, ids, flags,
-metadata-before-data and every value; against the test stack it received 544
-channels and 3 264 points with no violations. `test/etp.test.cjs` covers the same
-sequence in CI. Testing against a commercial ETP v1.2 store is still advisable
-before production use.
+1. Store (Protocol 4) `PutDataObjects`: the rig's BusinessAssociates, PWLS
+   PropertyKinds, Rig, Wells, Wellbores, RigUtilizations and Channels (Channel
+   resources carry `metric`, `storedUnit` and `factor` in customData); repeated
+   every 10 minutes for new wells, runs and channels.
+2. ChannelDataLoad (Protocol 22) `OpenChannels`: the store returns each channel's
+   last index; the edge sends everything after it from the historian (at most
+   `ETP_BACKFILL_HOURS` back when the store has nothing), oldest first, then new
+   data as it is written. Points are sent once they are at least
+   `ETP_TAIL_LAG_SECONDS` (5 s) old, because Telegraf commits one second's points in
+   several writes; a read that ends part-way through a timestamp re-reads it.
+3. After any outage the next session resumes from the store's last index.
+
+Verified end to end against the CMF server (`central/etp-witsml`): 628 objects put,
+578 channels opened, a 2-hour backfill (2.89 M points) in about 45 s, then live
+tailing; every channel, timestamp and value in the backfilled hour and in the
+live-tailed window matched the edge historian exactly.
+
+**Producer mode.** ChannelStreaming (Protocol 1) for third-party simple consumers:
+on `StartStreaming` the edge sends `ChannelMetadata` (canonical channel URI
+`eml:///witsml21.Channel(<uuid>)`, mnemonic, Energistics unit, PWLS
+`channelClassUri`, time index in UTC microseconds) before the first data of each
+channel, then `ChannelData`; `StopStreaming` stops it. No resume after a disconnect.
+
+`test/etp.test.cjs` covers the codec, identifiers and both modes, including resume
+after the store's last index and catch-up reads cut part-way through a timestamp.
+
+The CMF server was checked with an independent ETP v1.2 implementation (Geosiris
+`etpproto` 1.0.7: Core, Discovery, Store, ChannelSubscribe, ChannelDataFrame, no
+problems); see `central/etp-witsml`.
 
 ## Suggested next steps
 
-1. Fill the `tags` table with the standard mnemonic per metric so the CMF and
-   the edge exports use the same names.
-2. WITSML 2.1 objects and ETP Store/Discovery protocols for external consumers
-   belong at the CMF, which holds the same telemetry model for all rigs.
-3. Rig equipment ratings (BOP, pumps, top drive) and string components would
-   allow `rig`, `tubular` and `bhaRun` exports; they are not stored today.
+1. Confirm the units of the 61 channels listed as unknown (`/api/channels?unitSource=unknown`)
+   and add them to the EDR catalog.
+2. Rig equipment ratings (BOP, pumps, top drive) and string components would
+   allow `rig` details, `tubular` and `bhaRun` objects; they are not stored today.
+3. Test against a commercial ETP v1.2 store before relying on interoperability
+   with third-party products.
 
 ## Sources
 
@@ -147,5 +216,7 @@ before production use.
 * [WITSML 2.0: Log data object](https://docs.energistics.org/WITSML/WITSML_TOPICS/WITSML-000-048-0-C-sv2000.html)
 * [ETP v1.2 release announcement](https://energistics.org/node/383) and the ETP v1.2 specification (Energistics, 2021)
 * [etptypes 1.2.0](https://pypi.org/project/etptypes/) (Geosiris, Apache-2.0): the ETP v1.2 Avro schemas used by the edge
+* Energistics WITSML v2.1 and common v2.3 schemas and the PropertyKindDictionary v2.3 (Energistics Product License Agreement), used to validate the output and to take the PWLS property kinds
+* [etpproto 1.0.7](https://pypi.org/project/etpproto/) (Geosiris, Apache-2.0): independent ETP v1.2 implementation used for the conformance check
 * [ETP Avro serialization (binary and JSON encodings)](https://docs.energistics.org/ETP/ETP_TOPICS/ETP-000-012-0-C-sv1100.html)
 * [Energistics common: ForceUom](https://docs.energistics.org/COM/COM_TOPICS/COM-000-630-0-R-sv2100.html), [MomentOfForceUom](https://docs.energistics.org/COM/COM_TOPICS/COM-000-732-0-R-sv2100.html), [AngularVelocityUom](https://docs.energistics.org/COM/COM_TOPICS/COM-000-532-0-R-sv2100.html)

@@ -15,8 +15,11 @@ Central Monitoring Facility (CMF). Monitoring only: it never writes to a PLC.
 - Windows start/stop/health-check scripts, Windows services that start at boot
   and restart on failure (`Install-AHWR-EDGE-Services.ps1`), a daily records
   backup (`Backup-AHWR-EDGE-Records.ps1`) and a Docker stack (`docker-compose.yml`)
-- WITSML 1.4.1.1 export validated against the official schemas, and an ETP v1.2
-  ChannelStreaming publisher (`docs/witsml-interchange.md`)
+- Energistics interoperability (`docs/witsml-interchange.md`): WITSML 1.4.1.1 and
+  WITSML 2.1 exports validated against the official schemas, a channel dictionary
+  with Energistics units and PWLS property kinds, and an ETP v1.2 client that loads
+  the CMF store without loss (Store + ChannelDataLoad) or streams as a
+  ChannelStreaming producer
 
 ## Deliberately excluded
 

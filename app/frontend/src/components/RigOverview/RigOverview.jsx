@@ -47,7 +47,7 @@ const DEFAULT_BOTTOM_STATS = [
             { id: 'p1_1', label: 'FLOW IN', dataKey: 'flow_in', unit: 'Lt/min' },
             { id: 'p1_2', label: 'FLOW OUT', dataKey: 'flow_out', unit: '%' },
             { id: 'p1_3', label: 'ROP', dataKey: 'rop', unit: 'm/h' },
-            { id: 'p1_4', label: 'SPP', dataKey: 'pump_pressure', unit: 'Bar' },
+            { id: 'p1_4', label: 'SPP', dataKey: 'pump_pressure', unit: 'psi' },
             { id: 'p1_5', label: 'TOTAL STROKES', dataKey: 'total_strokes', unit: '' }
         ]
     },
@@ -740,7 +740,7 @@ export default function RigOverview() {
                                             whiteSpace: 'nowrap'
                                         }}
                                     >
-                                        {['cat_rpm', 'htd_rpm', 'cat_load', 'htd_torque', 'ahtd_torque', 'spm', 'rop', 'SPP-Bar', 'pump_pressure', 'block_position'].includes(s.dataKey) ? Math.round(Number(rigData[s.dataKey] || 0)) : Number(rigData[s.dataKey] || 0).toFixed(2)}
+                                        {['SPP-Bar', 'pump_pressure'].includes(s.dataKey) && s.unit !== 'Bar' && s.unit !== 'bar' ? Math.round(Number(rigData[s.dataKey] || 0) * 14.50377) : ['cat_rpm', 'htd_rpm', 'cat_load', 'htd_torque', 'ahtd_torque', 'spm', 'rop', 'block_position'].includes(s.dataKey) ? Math.round(Number(rigData[s.dataKey] || 0)) : Number(rigData[s.dataKey] || 0).toFixed(2)}
                                         <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
                                             {s.unit}
                                         </span>

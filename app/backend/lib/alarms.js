@@ -3,6 +3,7 @@
 // Per-tag setpoints (HiHi/Hi/Lo/LoLo) with deadband + on-delay, a state machine
 // (UNACK -> ACK -> return-to-normal), acknowledge, first-out, and an event log.
 const { readJson, writeJson, resolvePath } = require('./persist');
+const units = require('./units');
 
 const CONFIG_FILE = 'alarms_config.json';
 const EVENTS_FILE = 'alarms_events.json';
@@ -15,7 +16,7 @@ const DEFAULT_CONFIG = [
     { key: 'esd_active', dataKey: 'safety.esd_active', label: 'EMERGENCY SHUTDOWN ACTIVE', unit: '', hi: 1, deadband: 0, onDelaySec: 0, priority: 'P1', enabled: true },
     { key: 'lockout_active', dataKey: 'safety.lockout_active', label: 'EQUIPMENT LOCKOUT ACTIVE', unit: '', hi: 1, deadband: 0, onDelaySec: 0, priority: 'P1', enabled: true },
     { key: 'hookload_hi', dataKey: 'drawworks.hook_load', label: 'Hook Load High', unit: 't', hi: 180, hiHi: 200, deadband: 2, onDelaySec: 2, priority: 'P1', enabled: true },
-    { key: 'spp_hi', dataKey: 'mudpump.pressure', label: 'Pump / Standpipe Pressure High', unit: 'bar', hi: 240, hiHi: 300, deadband: 5, onDelaySec: 2, priority: 'P2', enabled: true },
+    { key: 'spp_hi', dataKey: 'mudpump.pressure', label: 'Pump / Standpipe Pressure High', unit: 'psi', hi: 3480, hiHi: 4350, deadband: 75, onDelaySec: 2, priority: 'P2', enabled: true },
     { key: 'tubing_hi', dataKey: 'wellhead.tubing_pressure', label: 'Tubing Pressure High', unit: 'bar', hi: 200, hiHi: 250, deadband: 5, onDelaySec: 2, priority: 'P1', enabled: true },
     { key: 'casing_hi', dataKey: 'wellhead.casing_pressure', label: 'Casing Pressure High', unit: 'bar', hi: 150, hiHi: 200, deadband: 5, onDelaySec: 2, priority: 'P1', enabled: true },
     { key: 'accumulator_lo', dataKey: 'well_control.accumulator_pressure', label: 'BOP Accumulator Low', unit: 'psi', lo: 2800, loLo: 2500, deadband: 25, onDelaySec: 3, priority: 'P1', enabled: true },
@@ -65,6 +66,18 @@ function load() {
         const added = DEFAULT_CONFIG.filter((c) => !have.has(c.key));
         if (added.length) { config = [...added, ...config]; writeJson(CONFIG_FILE, config).catch(() => {}); }
     }
+    // Standpipe pressure is presented in psi: limits saved in the stored unit (bar)
+    // become the same thresholds in psi, once.
+    let converted = false;
+    config = config.map((c) => {
+        const p = c && units.presentation(c.dataKey);
+        if (!p || c.unit !== p.stored) return c;
+        converted = true;
+        const next = { ...c, unit: p.unit };
+        for (const k of [...LIMIT_KEYS, 'deadband']) if (Number.isFinite(c[k])) next[k] = Math.round(c[k] * p.factor);
+        return next;
+    });
+    if (converted) writeJson(CONFIG_FILE, config).catch(() => {});
     // Never let a hand-edited/corrupt entry on disk break evaluation; skip it loudly.
     config = config.filter((c, i) => {
         const err = alarmEntryError(c, i);
@@ -109,7 +122,10 @@ function evaluate(data, nowMs) {
             const at = Date.parse(data._fieldTimes[c.dataKey]);
             if (!Number.isFinite(at) || nowMs - at > 10000) continue;
         }
-        const value = Number(raw);
+        // Limits are in the presented unit (psi for standpipe pressure) unless the
+        // entry says the stored unit.
+        const p = units.presentation(c.dataKey);
+        const value = Number(p && c.unit !== p.stored ? units.present(c.dataKey, raw) : raw);
         const existing = active.get(c.key);
         if (raw == null || !Number.isFinite(value)) { continue; } // no/stale data -> leave as-is
 

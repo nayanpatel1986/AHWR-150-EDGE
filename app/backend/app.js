@@ -14,6 +14,7 @@ const auth = require('./lib/auth');
 const validate = require('./lib/validate');
 const ldap = require('./lib/ldap');
 const alarms = require('./lib/alarms');
+const units = require('./lib/units');
 const workover = require('./lib/workover');
 const maintenance = require('./lib/maintenance');
 const cmms = require('./lib/cmms');
@@ -1833,12 +1834,14 @@ const tagDictionary = () => {
     const rows = new Map();
     for (const category of edrCatalog.categories) {
         for (const field of category.fields) {
-            rows.set(`${category.id}.${field.id}`, { metric: `${category.id}.${field.id}`, label: field.label, unit: field.unit || null, group: category.label });
+            // The catalog unit is the display unit; tags hold the stored unit (as at the CMF).
+            const metric = `${category.id}.${field.id}`;
+            rows.set(metric, { metric, label: field.label, unit: units.storedUnit(metric) || field.unit || null, group: category.label });
         }
     }
     for (const [raw, mapped] of Object.entries(FIELD_MAP)) {
         const metric = `${mapped.meas}.${mapped.field}`;
-        if (!rows.has(metric)) rows.set(metric, { metric, label: raw, unit: null, group: mapped.meas });
+        if (!rows.has(metric)) rows.set(metric, { metric, label: raw, unit: units.storedUnit(metric), group: mapped.meas });
     }
     return [...rows.values()];
 };

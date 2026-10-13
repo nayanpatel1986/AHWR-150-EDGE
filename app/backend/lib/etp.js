@@ -18,6 +18,7 @@ const { getRecent } = require('./sync');
 const { readJson, writeJson } = require('./persist');
 const transport = require('./transport');
 const witsml = require('./witsml');
+const units = require('./units');
 const bundle = require('./etp12/schemas.json');
 
 const SUBPROTOCOL = 'etp12.energistics.org';
@@ -105,7 +106,7 @@ function channelFor(metric) {
             id: channels.size + 1,     // smallest available integer, unique for the session
             uri: `eml:///witsml21.Channel(${uuidString(uuidFrom(`${config.deviceId}:${metric}`))})`,
             mnemonic: null,
-            uom: witsml.uomOf(info.unit),
+            uom: witsml.uomOf(units.presentation(metric)?.unit || info.unit),
             label: info.label || metric,
             announced: false,
         };
@@ -168,7 +169,7 @@ function streamData() {
         const t = micros(s.ts);
         for (const [metric, raw] of Object.entries(s.values || {})) {
             if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
-            data.push({ channelId: channelFor(metric).id, indexes: [{ item: { long: t } }], value: { item: { double: raw } }, valueAttributes: [] });
+            data.push({ channelId: channelFor(metric).id, indexes: [{ item: { long: t } }], value: { item: { double: units.present(metric, raw) } }, valueAttributes: [] });
         }
     }
     lastSentMs = Date.parse(snaps[snaps.length - 1].ts);

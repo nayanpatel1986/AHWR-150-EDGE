@@ -58,7 +58,7 @@ Map app units to Energistics UOM symbols when exporting:
 |---|---|---|
 | t (tonne-force: hook load, WOB) | `Mgf` | megagram-force = 1 metric tonne-force; there is no bare `tonf` (only `tonf[US]`, `tonf[UK]`) |
 | daN·m (torque) | `daN.m` | |
-| bar, psi | `bar`, `psi` | confirm SPP's source unit first (see below) |
+| bar, psi | `bar`, `psi` | standpipe pressure is exported in psi (below) |
 | rpm | `rpm` | |
 | m, mm, m/h | `m`, `mm`, `m/h` | |
 | m³, L/min, L/h | `m3`, `L/min`, `L/h` | |
@@ -93,10 +93,13 @@ Every document type is validated against the official WITSML 1.4.1.1 XSDs in
 `test/witsml.test.cjs` when `WITSML_XSD_DIR` points at the schemas (the earlier
 export fails that validation).
 
-Data-quality item to settle before any exchange: standpipe pressure comes from
-the PLC tag `SPP-Bar` but the EDR catalog labels `mudpump.pressure` as **psi**,
-and the export follows the catalog. Confirm the unit in the PLC program and make
-the catalog, the `tags` table and the export agree.
+**Standpipe pressure is in psi.** The PLC delivers it in bar (tags `SPP-Bar`,
+`Delta SPP-Bar`), and the historian stores it in bar, as the CMF does; the `tags`
+table says `bar`. Everything presented to people or other systems converts to psi
+(× 14.5037738): every screen, the SPP alarm (default HI 3480 / HIHI 4350 psi;
+limits saved earlier in bar are converted once to the same thresholds), the
+maintenance view, the WITSML log (`mudpump.pressure` and `delta_pressure`
+curves, including 1-minute min/max) and the ETP stream (`lib/units.js`).
 
 ## ETP v1.2 publisher (`lib/etp.js`)
 

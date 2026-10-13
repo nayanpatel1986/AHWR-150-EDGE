@@ -5,6 +5,8 @@
 // historian), messages (alarm history) and opsReports (daily activity report).
 // Element order follows the 1.4.1.1 XSD sequences; the test suite validates
 // the output against the official Energistics schemas.
+const units = require('./units');
+
 const NS = 'http://www.witsml.org/schemas/1series';
 const VER = '1.4.1.1';
 
@@ -128,6 +130,13 @@ function wellbores(well, { holeDepthM, bitDepthM } = {}) {
  */
 function logs(well, channels, rows, { name = 'Edge time log', uid, serviceCompany, intervalLabel } = {}) {
     const w = well || {};
+    // Present stored values in the operators' units (standpipe pressure: bar -> psi);
+    // a 1-minute envelope's <metric>_min/_max follow their metric.
+    channels = channels.map((c) => {
+        const base = String(c.metric).replace(/_(min|max)$/, '');
+        const p = units.presentation(base);
+        return p ? { ...c, unit: p.unit, value: (v) => units.present(base, v) } : c;
+    });
     const mnem = mnemonicsFor(channels.map((c) => c.metric));
     const first = rows.length ? rows[0].time : null;
     const last = rows.length ? rows[rows.length - 1].time : null;
@@ -143,7 +152,8 @@ function logs(well, channels, rows, { name = 'Edge time log', uid, serviceCompan
     const mnemonicList = ['TIME', ...channels.map((c) => mnem.get(c.metric))].join(',');
     const unitList = ['s', ...channels.map((c) => uomOf(c.unit))].join(',');
     const data = rows.map((r) => `<data>${[r.time, ...channels.map((c) => {
-        const v = num(r[c.metric]);
+        let v = num(r[c.metric]);
+        if (v !== null && c.value) v = c.value(v);
         return v === null ? '' : String(Number(v.toFixed(6)));
     })].join(',')}</data>`);
     const body = [

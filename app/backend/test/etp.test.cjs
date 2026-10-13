@@ -80,4 +80,8 @@ test('ChannelStreaming: session, StartStreaming, metadata before data, StopStrea
   assert.ok(hook, 'hook load channel announced with its mnemonic');
   const data = seen.find((m) => m.name === 'ChannelData').body.data;
   assert.ok(data.some((d) => d.channelId === hook.id && d.value.item.double === 60));
+  // Standpipe pressure is stored in bar and streamed in psi.
+  const spp = meta.find((c) => c.channelName === 'SPPA');
+  assert.equal(spp.uom, 'psi');
+  assert.ok(data.some((d) => d.channelId === spp.id && Math.abs(d.value.item.double - 120 * 14.5037738) < 1e-9));
 });

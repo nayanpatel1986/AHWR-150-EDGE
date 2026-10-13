@@ -146,6 +146,9 @@ $pgEnv = @("PGHOST=$(if ($settings['PGHOST']) { $settings['PGHOST'] } else { '12
 $paths = @("SETTINGS_FILE=$SettingsFile", "DATA_DIR=$Root\data\app", "FRONTEND_DIST_DIR=$Root\app\frontend\dist",
     "TELEGRAF_CONFIG_PATH=$Root\app\telegraf\telegraf.d\plc.conf", "BOP_CONFIG_PATH=$Root\data\app\bop_config.json",
     'TELEGRAF_LISTENER_URL=http://127.0.0.1:8186')
+# Node reads NODE_EXTRA_CA_CERTS (e.g. the company CA for the CMF and LDAPS) only
+# at process start, so it must be in the service environment, not just settings.env.
+if ($settings['NODE_EXTRA_CA_CERTS']) { $paths += "NODE_EXTRA_CA_CERTS=$($settings['NODE_EXTRA_CA_CERTS'])" }
 
 # Arguments are relative to each AppDirectory: no quoting, whatever the install path.
 Install-NssmService 'AHWR-Telegraf' $Telegraf '--config telegraf.conf --config-directory telegraf.d --watch-config poll' `

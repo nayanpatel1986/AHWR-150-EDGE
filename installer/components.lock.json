@@ -1,0 +1,129 @@
+{
+ "components": [
+  {
+   "name": "pgsql",
+   "file": "postgresql-18.6-1-windows-x64-binaries.zip",
+   "version": "18.6",
+   "sha256": "fbe23da234ee31547bf8a36d29dfd81e82b849df2d2b78d2eecb43d360252f8c",
+   "size": 343808005,
+   "source": "https://get.enterprisedb.com/postgresql/postgresql-18.6-1-windows-x64-binaries.zip",
+   "strip": "pgsql/",
+   "publisherCheck": "none published by EnterpriseDB",
+   "license": "PostgreSQL License"
+  },
+  {
+   "name": "timescaledb",
+   "file": "timescaledb-postgresql-18-windows-amd64.zip",
+   "version": "2.30.2",
+   "sha256": "7740fe499236591ea56f996a578cf1393eab2b0c726d9bc7b0653df665866e41",
+   "size": 8632311,
+   "source": "https://github.com/timescale/timescaledb/releases/download/2.30.2/timescaledb-postgresql-18-windows-amd64.zip",
+   "strip": "timescaledb/",
+   "publisherCheck": "GitHub release asset digest",
+   "license": "Apache-2.0 and Timescale License"
+  },
+  {
+   "name": "telegraf",
+   "file": "telegraf-1.36.4_windows_amd64.zip",
+   "version": "1.36.4",
+   "sha256": "a359b13bfda083ede58055e223e066c979eeaf02a2df96f536fb250c4155eef9",
+   "size": 77282677,
+   "source": "https://dl.influxdata.com/telegraf/releases/telegraf-1.36.4_windows_amd64.zip",
+   "strip": "telegraf-1.36.4/",
+   "publisherCheck": "v1.36.4 release notes (GitHub)",
+   "license": "MIT"
+  },
+  {
+   "name": "node",
+   "file": "node-v22.23.3-win-x64.zip",
+   "version": "22.23.3",
+   "sha256": "2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71",
+   "size": 35574076,
+   "source": "https://nodejs.org/dist/v22.23.3/node-v22.23.3-win-x64.zip",
+   "strip": "node-v22.23.3-win-x64/",
+   "publisherCheck": "nodejs.org SHASUMS256.txt",
+   "license": "MIT"
+  },
+  {
+   "name": "python",
+   "file": "python-3.12.10-embed-amd64.zip",
+   "version": "3.12.10",
+   "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+   "size": 11133606,
+   "source": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+   "strip": "",
+   "publisherCheck": "python.org release page (MD5)",
+   "license": "PSF-2.0"
+  },
+  {
+   "name": "nssm",
+   "file": "nssm-2.24.zip",
+   "version": "2.24",
+   "sha256": "727d1e42275c605e0f04aba98095c38a8e1e46def453cdffce42869428aa6743",
+   "size": 351793,
+   "source": "https://nssm.cc/release/nssm-2.24.zip",
+   "strip": "nssm-2.24/win64/",
+   "publisherCheck": "none published",
+   "license": "public domain"
+  },
+  {
+   "name": "python-wheels",
+   "dir": "wheels",
+   "version": "asyncua 1.1.5",
+   "sha256": "91268c04f88a4e38be92261c33418f7331ce6cd3d57919812bf9ad56364b8a58",
+   "source": "https://pypi.org (pip download --platform win_amd64 --python-version 3.12 asyncua==1.1.5)",
+   "publisherCheck": "PyPI sha256 digests",
+   "license": "asyncua LGPL-3.0; others MIT/BSD/Apache-2.0/PSF",
+   "files": [
+    {
+     "file": "aiofiles-25.1.0-py3-none-any.whl",
+     "sha256": "abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695"
+    },
+    {
+     "file": "aiosqlite-0.22.1-py3-none-any.whl",
+     "sha256": "21c002eb13823fad740196c5a2e9d8e62f6243bd9e7e4a1f87fb5e44ecb4fceb"
+    },
+    {
+     "file": "asyncua-1.1.5-py3-none-any.whl",
+     "sha256": "53c690a69e82f8e9a82174c7938d8cf2bff79052fe090ed60a505c9e66f56a58"
+    },
+    {
+     "file": "cffi-2.1.1-cp312-cp312-win_amd64.whl",
+     "sha256": "f53e442b08449d42821fa4a4fba000095af9f62742a500f978a9f557ec44339a"
+    },
+    {
+     "file": "cryptography-50.0.2-cp311-abi3-win_amd64.whl",
+     "sha256": "7afa5a6602a9f29af1f3a2965f831bae7c9d5d597b7cbb716d41ab3b7d89879c"
+    },
+    {
+     "file": "pycparser-3.11-py3-none-any.whl",
+     "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
+    },
+    {
+     "file": "pyopenssl-26.4.0-py3-none-any.whl",
+     "sha256": "f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c"
+    },
+    {
+     "file": "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+     "sha256": "a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427"
+    },
+    {
+     "file": "pytz-2026.5-py2.py3-none-any.whl",
+     "sha256": "e658af3757f9e26a9d25dd2aff38335acd92bc9104f890a894b2c1ba28311b03"
+    },
+    {
+     "file": "six-1.17.0-py2.py3-none-any.whl",
+     "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"
+    },
+    {
+     "file": "sortedcontainers-2.4.0-py2.py3-none-any.whl",
+     "sha256": "a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"
+    },
+    {
+     "file": "typing_extensions-4.16.0-py3-none-any.whl",
+     "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+    }
+   ]
+  }
+ ]
+}

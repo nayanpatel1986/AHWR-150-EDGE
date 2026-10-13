@@ -39,6 +39,20 @@ TimescaleDB 2.30.2 files from `timescaledb-postgresql-18-windows-amd64.zip`).
 For `PG_MODE=service`, install PostgreSQL 18 + TimescaleDB as described in the
 Edge Installation Guide instead.
 
+## Single-click installer
+
+`installer/` builds `AHWR-Edge-Setup_<version>`: the engineer fills in
+`rig-settings.ini` and runs `Install.bat`, which installs PostgreSQL 18 +
+TimescaleDB, Telegraf, Node.js, Python and the four Windows services from the
+bundled components, sets the firewall and power plan, schedules the backups and
+self-tests (ten stages, report in `D:\AHWR\logs\install-report.html`). Tools:
+Apply-Settings, Check-Health, Update (rolls back on failure), Backup-Now,
+Restore-Records, Collect-Logs, Uninstall. Build it with
+`installer/build.sh <components-dir> <output-dir> [version]` from a clean commit;
+the components are pinned and verified by `installer/components.lock.json`.
+`installer/README.txt` is the engineer's sheet; tests:
+`pwsh -File installer/test/setup.tests.ps1 [<built package>]`.
+
 ## First deployment
 
 1. Copy the repository and the separately secured `runtime` directory.

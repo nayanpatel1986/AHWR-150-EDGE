@@ -355,4 +355,5 @@ if ($probeHost -ne '127.0.0.1') { $localUrl = "${scheme}://${probeHost}:$appPort
 Write-Host "This PC: $localUrl"
 if ($lanIp -and $probeHost -eq '127.0.0.1' -and $env:HOST -ne '127.0.0.1') { Write-Host "Other PCs on this LAN: ${scheme}://${lanIp}:$appPort" }
 Write-Host 'Allow Windows Firewall access on the Private network if prompted.'
-Start-Process $localUrl
+# The single-click installer starts the edge once without opening a browser.
+if (-not $env:AHWR_NO_BROWSER) { Start-Process $localUrl }

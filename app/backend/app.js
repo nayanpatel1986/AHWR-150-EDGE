@@ -34,7 +34,10 @@ const tsdb = require('./lib/tsdb');
 const telemetryMap = require('./lib/telemetryMap');
 const telegrafConfig = require('./lib/telegrafConfig');
 const persist = require('./lib/persist');
+const channelDictionary = require('./lib/channels');
+const energistics = require('./lib/energistics');
 const edrCatalog = require('../shared/edrMetrics.json');
+const { FIELD_MAP } = require('./lib/fieldmap');
 
 const PORT = Number(process.env.PORT || 5000);
 // HOST: bind one interface (e.g. the rig-LAN address); default all interfaces.
@@ -132,11 +135,19 @@ io.on('connection', (socket) => {
     socket.emit('central_messages_update', centralMessages.snapshot());
 });
 
-// Tag dictionary (metric -> label/unit), loaded from the historian at start.
-const tagInfo = new Map();
+// Channel dictionary (lib/channels.js): Energistics identity and metadata of
+// every recorded metric; rebuilt whenever the PLC mapping changes.
+let channelDict = new Map();
 // Start the store-and-forward sync agent + ETP v1.2 publisher (outbound only).
-sync.start(io);
-etp.start(io, { describeMetric: (metric) => tagInfo.get(metric) });
+sync.start(io, { getChannels: () => channelDict });
+etp.start(io, {
+    getChannels: () => channelDict,
+    // Stored points of this rig in (afterMs, uptoMs], oldest first.
+    readTelemetry: async (afterMs, uptoMs, limit) => (await tsdb.query(
+        `SELECT ts, metric, value FROM telemetry WHERE rig_id = $1 AND ts > $2 AND ts <= $3 ORDER BY ts LIMIT $4`,
+        [currentRigId(), new Date(afterMs), new Date(uptoMs), limit])).rows,
+    listObjects: () => energistics.listObjects(),
+});
 centralMessages.start(io);
 
 // Rig identity in the historian = the CMF device id (sync config, else DEVICE_ID).
@@ -366,17 +377,43 @@ const saveModbusConfig = (config) => writeJsonAtomic(DB_PATH, config);
 // PLC tag -> CMF metric mapping. Telegraf applies it when writing; the live view
 // uses it to turn PLC-bit metrics (stored as 1/0) back into booleans.
 let tagMapping = telemetryMap.buildMapping(getModbusConfig());
+let historianReady = false;   // set by historianStartup() below
+energistics.configure({
+    getRigId: () => currentRigId(),
+    getWells: () => wells.getWells(),
+    getDictionary: () => channelDict,
+    getDepths: () => liveDepths(),
+    timeZone: require('./lib/witsml').localTimeZone(),
+});
+
+// WITSML Channel LoggingCompany: WITSML_LOGGING_COMPANY, else the rig itself.
+const loggingCompany = () => process.env.WITSML_LOGGING_COMPANY || currentRigId();
+
+function rebuildChannels() {
+    channelDict = channelDictionary.buildDictionary({
+        rigId: currentRigId(),
+        rows: channelDictionary.tagRows({ catalog: edrCatalog, fieldMap: FIELD_MAP, mapping: tagMapping }),
+        isBoolean: (metric) => telemetryMap.isBooleanMetric(tagMapping, metric),
+    });
+    if (historianReady) {
+        tsdb.upsertChannels(currentRigId(), channelDict.values(), { loggingCompany: loggingCompany() })
+            .catch((e) => console.error('Channel dictionary not stored:', e.message));
+    }
+    return channelDict;
+}
+
+rebuildChannels();
 
 // Rewrite telegraf.d/plc.conf for a PLC config (Telegraf hot-reloads it).
 function applyTelegrafConfig(config = getModbusConfig()) {
     tagMapping = telemetryMap.buildMapping(config);
+    rebuildChannels();
     const startupRetry = /^(1|true|yes)$/i.test(process.env.TELEGRAF_STARTUP_RETRY || '');
     if (telegrafConfig.writeManagedConfig(CONFIG_PATH, config, { rigId: currentRigId(), scriptPath: process.env.TELEGRAF_SCRIPT_PATH, startupRetry })) {
         console.log(`Telegraf PLC config written to ${CONFIG_PATH} (Telegraf hot-reloads it).`);
     }
 }
 
-const { FIELD_MAP } = require('./lib/fieldmap');
 
 // Metrics the history API serves: the EDR catalog plus every mapped PLC metric.
 const HISTORY_METRICS = new Set(edrCatalog.categories.flatMap(category =>
@@ -1616,6 +1653,49 @@ app.get('/api/witsml/log', auth.requireAuth, async (req, res) => {
         intervalLabel: `${tier === '1m' ? '1-minute mean' : 'full-rate'} data ${src.from} to ${src.to}`,
     }));
 });
+// ---- WITSML 2.1 (lib/witsml21.js, lib/energistics.js) ---------------------------
+// Channel dictionary: Energistics identity, unit and PWLS property kind of every
+// metric. ?unitSource=unknown lists the channels whose unit is not known.
+app.get('/api/channels', auth.requireAuth, (req, res) => {
+    const list = [...channelDict.values()].filter((c) => !req.query.unitSource || c.unitSource === req.query.unitSource);
+    res.json({ rigId: currentRigId(), count: list.length, channels: list });
+});
+const w21Well = (req) => {
+    const id = String(req.query.well || (wells.getActiveWell() || {}).name || '');
+    const w = wells.getWells().find((x) => x.id === id || x.name === id);
+    if (!w) throw Object.assign(new Error('unknown well (pass ?well=<id or name>)'), { status: 404 });
+    return w.name;
+};
+app.get('/api/witsml21/well', auth.requireAuth, async (req, res) => sendXml(res, null, await energistics.wellXml(w21Well(req))));
+app.get('/api/witsml21/wellbore', auth.requireAuth, async (req, res) => sendXml(res, null, await energistics.wellboreXml(w21Well(req))));
+app.get('/api/witsml21/rig', auth.requireAuth, (req, res) => sendXml(res, null, require('./lib/witsml21').rig(currentRigId(), {})));
+app.get('/api/witsml21/rigutilization', auth.requireAuth, async (req, res) => sendXml(res, null, await energistics.rigUtilizationXml(w21Well(req))));
+app.get('/api/witsml21/channel', auth.requireAuth, async (req, res) => sendXml(res, null, await energistics.channelXml(String(req.query.metric || ''))));
+// ?well=<id>: the run's Log (channel metadata). channelset: with data when
+// ?data=1 (optional start/stop within the run, at most WITSML_MAX_ROWS rows).
+app.get('/api/witsml21/log', auth.requireAuth, async (req, res) => {
+    const r = await energistics.runXml(w21Well(req), { kind: 'log' });
+    sendXml(res, null, r.xml);
+});
+app.get('/api/witsml21/channelset', auth.requireAuth, async (req, res) => {
+    const metrics = typeof req.query.metrics === 'string' && req.query.metrics.trim() ? req.query.metrics.split(',').map((m) => m.trim()) : null;
+    const r = await energistics.runXml(w21Well(req), {
+        kind: 'channelset', data: req.query.data === '1', start: req.query.start, end: req.query.stop, maxRows: WITSML_MAX_ROWS, metrics,
+    });
+    if (r.truncated) res.setHeader('X-Export-Truncated', 'true');
+    sendXml(res, null, r.xml);
+});
+// Index of every published object (type, uuid, title, last change).
+app.get('/api/witsml21/objects', auth.requireAuth, async (req, res) => {
+    const list = await energistics.listObjects();
+    res.json(list.map(({ type, uuid, title, lastChanged, metric }) => ({ type, uuid, title, lastChanged, metric })));
+});
+app.get('/api/witsml21/object/:uuid', auth.requireAuth, async (req, res) => {
+    const o = energistics.byUuid(await energistics.listObjects(), String(req.params.uuid).toLowerCase());
+    if (!o) return res.status(404).json({ error: 'unknown object' });
+    sendXml(res, null, await o.xml());
+});
+
 // Alarm history as WITSML messages (?well=<id> limits it to that well's window).
 app.get('/api/witsml/messages', auth.requireAuth, (req, res) => {
     const well = witsmlWell(req);
@@ -1830,31 +1910,15 @@ server.listen(PORT, HOST, () => {
 // backend's mapping, register the rig, seed the tag dictionary and back-fill
 // runs for wells started before the database existed. Retries until the
 // database and schema are available (e.g. PostgreSQL still starting).
-const tagDictionary = () => {
-    const rows = new Map();
-    for (const category of edrCatalog.categories) {
-        for (const field of category.fields) {
-            // The catalog unit is the display unit; tags hold the stored unit (as at the CMF).
-            const metric = `${category.id}.${field.id}`;
-            rows.set(metric, { metric, label: field.label, unit: units.storedUnit(metric) || field.unit || null, group: category.label });
-        }
-    }
-    for (const [raw, mapped] of Object.entries(FIELD_MAP)) {
-        const metric = `${mapped.meas}.${mapped.field}`;
-        if (!rows.has(metric)) rows.set(metric, { metric, label: raw, unit: units.storedUnit(metric), group: mapped.meas });
-    }
-    return [...rows.values()];
-};
-let historianReady = false;
 const historianStartup = async () => {
     if (historianReady || shuttingDown) return;
     try { applyTelegrafConfig(); } catch (e) { console.error('Failed to write Telegraf PLC config:', e.message); }
     if (!(await tsdb.checkSchema())) return;
     try {
         await tsdb.ensureRig(currentRigId());
-        await tsdb.upsertTags(tagDictionary());
-        const { rows: tagRows } = await tsdb.query('SELECT metric, label, unit FROM tags');
-        for (const r of tagRows) tagInfo.set(r.metric, { label: r.label, unit: r.unit });
+        await tsdb.upsertTags(channelDictionary.tagRows({ catalog: edrCatalog, fieldMap: FIELD_MAP, mapping: tagMapping }));
+        await tsdb.upsertChannels(currentRigId(), rebuildChannels().values(), { loggingCompany: loggingCompany() });
+        await energistics.refreshExtents({ full: true });
         const runs = await wellArchive.syncRegistry(wells.getWells());
         historianReady = true;
         console.log(`TimescaleDB historian ready (rig ${currentRigId()}, ${runs} well run(s) synced).`);
@@ -1863,6 +1927,14 @@ const historianStartup = async () => {
     }
 };
 const historianTimer = setInterval(() => { if (!historianReady) historianStartup(); }, 30000);
+// Channel data extents for WITSML 2.1 / ETP: every minute, and a full pass daily.
+let extentRuns = 0;
+const extentTimer = setInterval(() => {
+    if (!historianReady) return;
+    extentRuns += 1;
+    energistics.refreshExtents({ full: extentRuns % 1440 === 0 }).catch((e) => console.error('Channel extents:', e.message));
+}, 60000);
+extentTimer.unref();
 
 // Periodically flush drilling state off the hot loop.
 const flushTimer = setInterval(flushDrillingState, Number(process.env.STATE_FLUSH_MS || 5000));

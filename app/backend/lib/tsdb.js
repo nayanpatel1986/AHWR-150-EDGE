@@ -5,6 +5,7 @@
 //   PGHOST (127.0.0.1), PGPORT (5432), PGDATABASE (ahwr_edge), PGUSER (ahwr_app), PGPASSWORD
 // Schema: app/sql/02-schema.sql. The backend never creates or alters tables.
 const { Pool } = require('pg');
+const ids = require('./ids');
 
 const pool = new Pool({
     host: process.env.PGHOST || '127.0.0.1',
@@ -51,12 +52,14 @@ function timeBound(spec, params) {
 }
 
 // ---- Startup ---------------------------------------------------------------
+// 3: Energistics identity (uuid columns, wellbores, channels).
+const REQUIRED_SCHEMA = 3;
 let schemaOk = false;
 async function checkSchema() {
     try {
         const { rows } = await query('SELECT max(version) AS v FROM edge_schema');
-        schemaOk = Number(rows[0] && rows[0].v) >= 1;
-        if (!schemaOk) console.error('TimescaleDB: schema version missing — apply app/sql/02-schema.sql.');
+        schemaOk = Number(rows[0] && rows[0].v) >= REQUIRED_SCHEMA;
+        if (!schemaOk) console.error(`TimescaleDB: schema version ${rows[0] && rows[0].v} is older than ${REQUIRED_SCHEMA} — apply app/sql/02-schema.sql.`);
     } catch (e) {
         schemaOk = false;
         console.error(`TimescaleDB: schema check failed (${e.message}). Apply app/sql/01-roles.sql and 02-schema.sql, and check PG* settings.`);
@@ -69,9 +72,9 @@ const knownRigs = new Set();
 async function ensureRig(rigId) {
     if (!rigId || knownRigs.has(rigId)) return;
     await query(
-        `INSERT INTO rigs (rig_id, name, status, schema_version)
-         VALUES ($1, $1, 'online', 'edge')
-         ON CONFLICT (rig_id) DO UPDATE SET updated_at = now()`, [rigId]);
+        `INSERT INTO rigs (rig_id, name, status, schema_version, uuid)
+         VALUES ($1, $1, 'online', 'edge', $2)
+         ON CONFLICT (rig_id) DO UPDATE SET updated_at = now(), uuid = EXCLUDED.uuid`, [rigId, ids.rig(rigId)]);
     knownRigs.add(rigId);
 }
 
@@ -85,6 +88,36 @@ async function upsertTags(rows) {
            SET label = EXCLUDED.label, unit = EXCLUDED.unit, group_name = EXCLUDED.group_name`,
         [rows.map((r) => r.metric), rows.map((r) => r.label || null), rows.map((r) => r.unit || null), rows.map((r) => r.group || null)]);
     return rows.length;
+}
+
+/** Upsert the channel dictionary of one rig (lib/channels.js entries). */
+async function upsertChannels(rigId, entries, { loggingCompany = null } = {}) {
+    const list = [...entries];
+    if (!list.length) return 0;
+    const col = (f) => list.map(f);
+    await query(
+        `INSERT INTO channels (rig_id, metric, uuid, mnemonic, label, group_name, stored_unit, uom, factor,
+                               data_kind, property_kind_uuid, property_kind, unit_source, logging_company, updated_at)
+         SELECT $1, u.*, $14, now() FROM unnest($2::text[], $3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[],
+                                     $8::text[], $9::float8[], $10::text[], $11::uuid[], $12::text[], $13::text[])
+           AS u(metric, uuid, mnemonic, label, group_name, stored_unit, uom, factor, data_kind,
+                property_kind_uuid, property_kind, unit_source)
+         ON CONFLICT (rig_id, metric) DO UPDATE
+           SET uuid = EXCLUDED.uuid, mnemonic = EXCLUDED.mnemonic, label = EXCLUDED.label,
+               group_name = EXCLUDED.group_name, stored_unit = EXCLUDED.stored_unit, uom = EXCLUDED.uom,
+               factor = EXCLUDED.factor, data_kind = EXCLUDED.data_kind,
+               property_kind_uuid = EXCLUDED.property_kind_uuid, property_kind = EXCLUDED.property_kind,
+               unit_source = EXCLUDED.unit_source, logging_company = EXCLUDED.logging_company, updated_at = now()
+         WHERE (channels.uuid, channels.mnemonic, channels.uom, channels.factor, channels.property_kind_uuid,
+                channels.label, channels.stored_unit, channels.unit_source, channels.logging_company)
+               IS DISTINCT FROM
+               (EXCLUDED.uuid, EXCLUDED.mnemonic, EXCLUDED.uom, EXCLUDED.factor, EXCLUDED.property_kind_uuid,
+                EXCLUDED.label, EXCLUDED.stored_unit, EXCLUDED.unit_source, EXCLUDED.logging_company)`,
+        [rigId, col((e) => e.metric), col((e) => e.uuid), col((e) => e.mnemonic), col((e) => e.label),
+            col((e) => e.group), col((e) => e.storedUnit), col((e) => e.uom), col((e) => e.factor),
+            col((e) => e.dataKind), col((e) => e.propertyKind.uuid), col((e) => e.propertyKind.title),
+            col((e) => e.unitSource), loggingCompany]);
+    return list.length;
 }
 
 /** Insert telemetry rows: [{ ts, metric, value }] for one rig. */
@@ -119,5 +152,5 @@ const close = () => pool.end();
 module.exports = {
     pool, query, durationToInterval, timeBound,
     checkSchema, isSchemaOk: () => schemaOk,
-    ensureRig, upsertTags, insertTelemetry, insertEvent, close,
+    ensureRig, upsertTags, upsertChannels, insertTelemetry, insertEvent, close, REQUIRED_SCHEMA,
 };

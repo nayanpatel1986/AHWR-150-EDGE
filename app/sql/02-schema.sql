@@ -260,6 +260,54 @@ CREATE OR REPLACE VIEW well_1m AS
      AND a.bucket <  COALESCE(r.ended_at, 'infinity'::timestamptz);
 
 -- ---------------------------------------------------------------------
+-- Energistics identity (WITSML 2.1 / ETP v1.2). Name-based UUIDs computed the
+-- same way at the edge and the CMF (backend lib/ids.js), stored for lookup.
+-- channels: one row per recorded metric with the metadata a WITSML 2.1 Channel
+-- and an ETP ChannelMetadataRecord need (mnemonic, Energistics unit of the
+-- presented values, PWLS property kind). Same table at the CMF, all rigs.
+-- ---------------------------------------------------------------------
+ALTER TABLE rigs ADD COLUMN IF NOT EXISTS uuid UUID UNIQUE;
+ALTER TABLE wells ADD COLUMN IF NOT EXISTS uuid UUID UNIQUE;
+ALTER TABLE well_runs ADD COLUMN IF NOT EXISTS uuid UUID UNIQUE;
+
+CREATE TABLE IF NOT EXISTS wellbores (
+    uuid        UUID PRIMARY KEY,
+    well_id     TEXT NOT NULL REFERENCES wells(well_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    name        TEXT NOT NULL,
+    number      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (well_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS channels (
+    rig_id             TEXT NOT NULL,
+    metric             TEXT NOT NULL,
+    uuid               UUID NOT NULL UNIQUE,
+    mnemonic           TEXT NOT NULL,
+    label              TEXT,
+    group_name         TEXT,
+    stored_unit        TEXT,                              -- unit of the values in telemetry
+    uom                TEXT NOT NULL,                     -- Energistics unit of presented values
+    factor             DOUBLE PRECISION NOT NULL DEFAULT 1, -- presented = stored * factor
+    data_kind          TEXT NOT NULL DEFAULT 'double',
+    property_kind_uuid UUID NOT NULL,                     -- Energistics PWLS property kind
+    property_kind      TEXT NOT NULL,
+    unit_source        TEXT,
+    logging_company    TEXT,                              -- WITSML Channel LoggingCompany (default: the rig)                              -- how the unit was determined
+    first_ts           TIMESTAMPTZ,                       -- data extent in telemetry (maintained
+    last_ts            TIMESTAMPTZ,                       --   by the backend; NULL = no data)
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (rig_id, metric)
+);
+-- Columns added after the table first shipped (idempotent upgrades).
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS logging_company TEXT;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS first_ts TIMESTAMPTZ;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS last_ts TIMESTAMPTZ;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+
+-- ---------------------------------------------------------------------
 -- Operating records (schema app): users, work orders, logbook, calibrations,
 -- alarm settings/events, well registry, dashboard layout, sync state, ...
 -- One JSON document per record set (lib/persist.js), loaded into memory by
@@ -285,7 +333,7 @@ CREATE TABLE IF NOT EXISTS edge_schema (
     version    INTEGER PRIMARY KEY,
     applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-INSERT INTO edge_schema (version) VALUES (1), (2) ON CONFLICT DO NOTHING;
+INSERT INTO edge_schema (version) VALUES (1), (2), (3) ON CONFLICT DO NOTHING;
 
 -- ---------------------------------------------------------------------
 -- Least-privilege grants
@@ -296,7 +344,7 @@ GRANT INSERT ON telemetry TO telegraf_writer;
 GRANT SELECT, INSERT ON telemetry TO ahwr_app;
 GRANT SELECT ON telemetry_1m, telemetry_1m_legacy, telemetry_1m_all, well_1m TO ahwr_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
-    rigs, events, connections, tags, wells, well_runs,
+    rigs, events, connections, tags, wells, well_runs, wellbores, channels,
     telemetry_import, telemetry_imports
     TO ahwr_app;
 GRANT SELECT ON edge_schema, edge_migration_progress TO ahwr_app;

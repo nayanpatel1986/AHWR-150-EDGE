@@ -35,6 +35,20 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # Applies app/sql (idempotent) on every start, so upgrades reach existing databases.
+  db-migrate:
+    image: timescale/timescaledb:2.30.2-pg18
+    command: ["sh", "/ahwr-sql/docker-migrate.sh"]
+    environment:
+      PGHOST: timescaledb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      TELEGRAF_DB_PASSWORD: ${TELEGRAF_DB_PASSWORD}
+    volumes:
+      - ./app/sql:/ahwr-sql:ro
+    depends_on: { timescaledb: { condition: service_healthy } }
+    restart: "no"
+
   backend:
     build: { context: ./app, dockerfile: backend/Dockerfile }
     environment:
@@ -51,7 +65,7 @@ services:
     volumes:
       - appdata:/data
       - telegraf-d:/etc/telegraf/telegraf.d
-    depends_on: { timescaledb: { condition: service_healthy } }
+    depends_on: { db-migrate: { condition: service_completed_successfully } }
     restart: unless-stopped
 
   telegraf:

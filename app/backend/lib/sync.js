@@ -157,6 +157,13 @@ function seal(nowMs = Date.now()) {
         createdAt: new Date(nowMs).toISOString(),
         channels: currentBatch.channels, events: currentBatch.events,
     };
+    const dict = dictionaryPayload();
+    if (dict) {
+        batch.dictionary = dict.list;
+        batch.loggingCompany = process.env.WITSML_LOGGING_COMPANY || config.deviceId;
+        dictionarySentHash = dict.hash;   // buffered: delivered (and replayed) with this batch
+        dictionarySentAt = Date.now();
+    }
     const fname = `batch-${String(seq).padStart(9, '0')}-${String(points).padStart(6, '0')}.json.gz`;
     try {
         const body = config.compression ? zlib.gzipSync(Buffer.from(JSON.stringify(batch))) : Buffer.from(JSON.stringify(batch));
@@ -375,8 +382,26 @@ function scheduleTimers() {
     sealTimer = setInterval(() => { if (Date.now() - lastSealMs >= config.batchSeconds * 1000) seal(); }, Math.max(MIN_SYNC_INTERVAL_MS, config.batchSeconds * 1000));
 }
 
-function start(ioRef) {
+// Channel dictionary (lib/channels.js) for the CMF's WITSML 2.1 / ETP objects:
+// sent with the first batch, whenever it changes, and at least every 6 hours.
+let getChannels = () => new Map();
+let dictionarySentHash = null;
+let dictionarySentAt = 0;
+const DICTIONARY_REFRESH_MS = 6 * 3600 * 1000;
+function dictionaryPayload() {
+    const list = [...getChannels().values()].map((c) => ({
+        metric: c.metric, mnemonic: c.mnemonic, label: c.label, group: c.group, storedUnit: c.storedUnit, uom: c.uom,
+        factor: c.factor, dataKind: c.dataKind, propertyKind: c.propertyKind, unitSource: c.unitSource,
+    }));
+    if (!list.length) return null;
+    const hash = require('crypto').createHash('sha1').update(JSON.stringify(list)).digest('hex');
+    if (hash === dictionarySentHash && Date.now() - dictionarySentAt < DICTIONARY_REFRESH_MS) return null;
+    return { list, hash };
+}
+
+function start(ioRef, opts = {}) {
     io = ioRef;
+    if (typeof opts.getChannels === 'function') getChannels = opts.getChannels;
     if (config.enabled && config.centralUrl) {
         setTimeout(() => { flush({ heartbeatWhenEmpty: true }).catch(() => {}); }, 1000);
     }

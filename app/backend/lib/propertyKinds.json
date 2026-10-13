@@ -1,0 +1,506 @@
+{
+ "source": "Energistics PropertyKindDictionary v2.3 (PWLS), uuid 39ff6011-3451-4420-a877-ddc79b4024be, last update 2021-11-17T23:35:26Z; subset used by AHWR-150 EDGE",
+ "dictionaryUuid": "39ff6011-3451-4420-a877-ddc79b4024be",
+ "kinds": {
+  "angular velocity": {
+   "uuid": "c1cc24f5-db8c-4bf2-be5c-f086b5d232f0",
+   "title": "angular velocity",
+   "quantityClass": "angular velocity",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "bit depth": {
+   "uuid": "a8eeb8b7-08eb-4882-8ca9-6bf8d7e1898c",
+   "title": "bit depth",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4364b378-899a-403a-8401-b06abd4fc0cf",
+    "title": "depth"
+   }
+  },
+  "block height": {
+   "uuid": "2db028da-1d98-47d0-8e4b-ac4ddfd18fdb",
+   "title": "block height",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "714f7bcb-434e-43a0-baa7-081da8c06347",
+    "title": "height"
+   }
+  },
+  "coolant temperature": {
+   "uuid": "61ed98ea-76af-41a7-8453-850a614906e4",
+   "title": "coolant temperature",
+   "quantityClass": "thermodynamic temperature",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "08260920-c22a-4000-af25-60a8f28e19f7",
+    "title": "temperature"
+   }
+  },
+  "count": {
+   "uuid": "ee1efc57-1990-4c63-af90-974f186d1644",
+   "title": "count",
+   "quantityClass": "unitless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "count rate": {
+   "uuid": "08c607d4-6f71-4759-8b63-f1b5b8fd6548",
+   "title": "count rate",
+   "quantityClass": "frequency",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4bd591ae-f4dc-4de8-8843-49e640d63959",
+    "title": "frequency"
+   }
+  },
+  "depth": {
+   "uuid": "4364b378-899a-403a-8401-b06abd4fc0cf",
+   "title": "depth",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4a305182-221e-4205-9e7c-a36b06fa5b3d",
+    "title": "length"
+   }
+  },
+  "differential pressure": {
+   "uuid": "54515a5e-b484-4891-96b2-e13ea28647be",
+   "title": "differential pressure",
+   "quantityClass": "pressure",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "e703be06-9568-4bc6-ab1c-db15dd012e77",
+    "title": "pressure"
+   }
+  },
+  "electric current": {
+   "uuid": "b55f43ed-f752-47b0-b94b-a80183e0e056",
+   "title": "electric current",
+   "quantityClass": "electric current",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "electric potential": {
+   "uuid": "953ff2be-41d4-4b3a-bc6c-21f5ed6cd1cd",
+   "title": "electric potential",
+   "quantityClass": "electric potential difference",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "engine oil pressure": {
+   "uuid": "42d9e215-6000-4f95-8649-25be5e72d1f6",
+   "title": "engine oil pressure",
+   "quantityClass": "pressure",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "e703be06-9568-4bc6-ab1c-db15dd012e77",
+    "title": "pressure"
+   }
+  },
+  "engine oil temperature": {
+   "uuid": "7289c348-2ce1-473a-9946-d41166422f90",
+   "title": "engine oil temperature",
+   "quantityClass": "thermodynamic temperature",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "08260920-c22a-4000-af25-60a8f28e19f7",
+    "title": "temperature"
+   }
+  },
+  "flag": {
+   "uuid": "2138087f-8ba8-4893-9c77-41a8772268d6",
+   "title": "flag",
+   "quantityClass": "unitless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "12111ccf-2ed3-42f9-9e2f-12977a8a4be9",
+    "title": "indicator"
+   }
+  },
+  "flowrate": {
+   "uuid": "954570a3-d587-454c-8481-bf21657625e2",
+   "title": "flowrate",
+   "quantityClass": "volume per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "fluid volume": {
+   "uuid": "2f4430fe-7667-4deb-a8a1-bc13422ca9f6",
+   "title": "fluid volume",
+   "quantityClass": "volume",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "2dc6dc83-e1f9-48f6-87f2-57bcdd42738b",
+    "title": "volume"
+   }
+  },
+  "force": {
+   "uuid": "a5789b56-72a3-4561-b906-b5ba13852c23",
+   "title": "force",
+   "quantityClass": "force",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "fraction": {
+   "uuid": "579e92d5-5c34-474c-951f-f5cc3ddf4a63",
+   "title": "fraction",
+   "quantityClass": "dimensionless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "frequency": {
+   "uuid": "4bd591ae-f4dc-4de8-8843-49e640d63959",
+   "title": "frequency",
+   "quantityClass": "frequency",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "height": {
+   "uuid": "714f7bcb-434e-43a0-baa7-081da8c06347",
+   "title": "height",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4a305182-221e-4205-9e7c-a36b06fa5b3d",
+    "title": "length"
+   }
+  },
+  "hook load": {
+   "uuid": "d0a7c1c5-73da-45b5-a762-eb49721d91e9",
+   "title": "hook load",
+   "quantityClass": "force",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "3bf92c0b-b712-4128-b7bc-b21e0270d9be",
+    "title": "load"
+   }
+  },
+  "indicator": {
+   "uuid": "12111ccf-2ed3-42f9-9e2f-12977a8a4be9",
+   "title": "indicator",
+   "quantityClass": "unitless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "length": {
+   "uuid": "4a305182-221e-4205-9e7c-a36b06fa5b3d",
+   "title": "length",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "load": {
+   "uuid": "3bf92c0b-b712-4128-b7bc-b21e0270d9be",
+   "title": "load",
+   "quantityClass": "force",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a5789b56-72a3-4561-b906-b5ba13852c23",
+    "title": "force"
+   }
+  },
+  "makeup torque": {
+   "uuid": "2712394f-bb11-4a2a-be72-3b38b08cea09",
+   "title": "makeup torque",
+   "quantityClass": "energy",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "48dcb552-f419-43b5-a7e0-941a907083bd",
+    "title": "torque"
+   }
+  },
+  "mass": {
+   "uuid": "e770fed8-43e3-4bda-a94e-6bdcdafb43dc",
+   "title": "mass",
+   "quantityClass": "mass",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "measured depth": {
+   "uuid": "c48c65d4-9680-4d10-903c-a1b2e30f66b5",
+   "title": "measured depth",
+   "quantityClass": "length",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4364b378-899a-403a-8401-b06abd4fc0cf",
+    "title": "depth"
+   }
+  },
+  "motor speed": {
+   "uuid": "44b33731-6667-499f-92d4-cd66acc8430c",
+   "title": "motor speed",
+   "quantityClass": "angular velocity",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "c1cc24f5-db8c-4bf2-be5c-f086b5d232f0",
+    "title": "angular velocity"
+   }
+  },
+  "mud flow in": {
+   "uuid": "42da9eb5-0793-41c8-8a49-cb4ee31a238c",
+   "title": "mud flow in",
+   "quantityClass": "volume per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4a03236f-0eae-45e8-95a8-28b21eaed4dd",
+    "title": "mud flowrate"
+   }
+  },
+  "mud flow out": {
+   "uuid": "d4e95b31-9400-4c26-b60b-7974c274d149",
+   "title": "mud flow out",
+   "quantityClass": "volume per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "4a03236f-0eae-45e8-95a8-28b21eaed4dd",
+    "title": "mud flowrate"
+   }
+  },
+  "mud flowrate": {
+   "uuid": "4a03236f-0eae-45e8-95a8-28b21eaed4dd",
+   "title": "mud flowrate",
+   "quantityClass": "volume per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "954570a3-d587-454c-8481-bf21657625e2",
+    "title": "flowrate"
+   }
+  },
+  "mud tank volume": {
+   "uuid": "54bb912e-5a48-4ab6-a50c-82d98425b478",
+   "title": "mud tank volume",
+   "quantityClass": "volume",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "2f4430fe-7667-4deb-a8a1-bc13422ca9f6",
+    "title": "fluid volume"
+   }
+  },
+  "operating time": {
+   "uuid": "396acc58-2ad2-452a-8351-5a693bf0f899",
+   "title": "operating time",
+   "quantityClass": "time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "32d5a555-a55e-4339-998b-f9d49e9d6dc4",
+    "title": "time interval"
+   }
+  },
+  "penetration rate": {
+   "uuid": "d2b70df2-6df3-4751-bd02-150e3fc96450",
+   "title": "penetration rate",
+   "quantityClass": "length per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "d80b7b4d-f51d-4821-b1db-c595f18c51db",
+    "title": "velocity"
+   }
+  },
+  "power": {
+   "uuid": "6e97defa-c26e-4cb4-99e8-ffdccf76723a",
+   "title": "power",
+   "quantityClass": "power",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "pressure": {
+   "uuid": "e703be06-9568-4bc6-ab1c-db15dd012e77",
+   "title": "pressure",
+   "quantityClass": "pressure",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "property": {
+   "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+   "title": "property",
+   "quantityClass": "unitless",
+   "isAbstract": true,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "rotary speed": {
+   "uuid": "39ee0a5d-9a02-48ed-81e1-8772c31a0c54",
+   "title": "rotary speed",
+   "quantityClass": "angular velocity",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "c1cc24f5-db8c-4bf2-be5c-f086b5d232f0",
+    "title": "angular velocity"
+   }
+  },
+  "standpipe pressure": {
+   "uuid": "f001a670-584b-4527-9db5-89bc304b82a5",
+   "title": "standpipe pressure",
+   "quantityClass": "pressure",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "e703be06-9568-4bc6-ab1c-db15dd012e77",
+    "title": "pressure"
+   }
+  },
+  "status": {
+   "uuid": "4b4e5316-c291-46d4-8bd5-ff05987cb941",
+   "title": "status",
+   "quantityClass": "unitless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "12111ccf-2ed3-42f9-9e2f-12977a8a4be9",
+    "title": "indicator"
+   }
+  },
+  "stroke rate": {
+   "uuid": "9198d21c-9b22-4b48-94ef-bf018ad35db9",
+   "title": "stroke rate",
+   "quantityClass": "frequency",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "08c607d4-6f71-4759-8b63-f1b5b8fd6548",
+    "title": "count rate"
+   }
+  },
+  "surface torque": {
+   "uuid": "768a28b0-36a9-4cf5-927d-31536ff9d678",
+   "title": "surface torque",
+   "quantityClass": "energy",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "48dcb552-f419-43b5-a7e0-941a907083bd",
+    "title": "torque"
+   }
+  },
+  "temperature": {
+   "uuid": "08260920-c22a-4000-af25-60a8f28e19f7",
+   "title": "temperature",
+   "quantityClass": "thermodynamic temperature",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "time": {
+   "uuid": "3a72f130-4ebf-4ea9-a330-a610a4e4ed0e",
+   "title": "time",
+   "quantityClass": "time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "time interval": {
+   "uuid": "32d5a555-a55e-4339-998b-f9d49e9d6dc4",
+   "title": "time interval",
+   "quantityClass": "time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "3a72f130-4ebf-4ea9-a330-a610a4e4ed0e",
+    "title": "time"
+   }
+  },
+  "torque": {
+   "uuid": "48dcb552-f419-43b5-a7e0-941a907083bd",
+   "title": "torque",
+   "quantityClass": "energy",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "unknown": {
+   "uuid": "73f28137-03ef-45b4-8e85-31869c7d36fd",
+   "title": "unknown",
+   "quantityClass": "unitless",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "velocity": {
+   "uuid": "d80b7b4d-f51d-4821-b1db-c595f18c51db",
+   "title": "velocity",
+   "quantityClass": "length per time",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "volume": {
+   "uuid": "2dc6dc83-e1f9-48f6-87f2-57bcdd42738b",
+   "title": "volume",
+   "quantityClass": "volume",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a48c9c25-1e3a-43c8-be6a-044224cc69cb",
+    "title": "property"
+   }
+  },
+  "weight on bit": {
+   "uuid": "7674f9e3-82c8-4060-8ce7-32d5e4e12832",
+   "title": "weight on bit",
+   "quantityClass": "force",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "a5789b56-72a3-4561-b906-b5ba13852c23",
+    "title": "force"
+   }
+  },
+  "wellhead pressure": {
+   "uuid": "aa8ae951-0cb2-4663-916b-625bd14dc589",
+   "title": "wellhead pressure",
+   "quantityClass": "pressure",
+   "isAbstract": false,
+   "parent": {
+    "uuid": "e703be06-9568-4bc6-ab1c-db15dd012e77",
+    "title": "pressure"
+   }
+  }
+ }
+}

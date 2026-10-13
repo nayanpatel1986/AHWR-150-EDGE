@@ -20,6 +20,7 @@
 // Well runs are written through from the edge well registry (wells.json) to
 // the CMF tables wells / well_runs, with well_id = well name as at the CMF.
 const tsdb = require('./tsdb');
+const ids = require('./ids');
 const { isFluxInstant } = require('./validate');
 
 const WINDOW = '1m';
@@ -52,17 +53,22 @@ async function upsertWell(well, { current } = {}) {
     const rigId = getRigId();
     await tsdb.ensureRig(rigId);
     await tsdb.query(
-        `INSERT INTO wells (well_id, name, uwi, well_type, status, field, operator, notes, current_rig_id)
-         VALUES ($1, $1, $2, 'workover', 'workover', $3, $4, $5, $6)
+        `INSERT INTO wells (well_id, name, uwi, well_type, status, field, operator, notes, current_rig_id, uuid)
+         VALUES ($1, $1, $2, 'workover', 'workover', $3, $4, $5, $6, $8)
          ON CONFLICT (well_id) DO UPDATE
            SET uwi = COALESCE(EXCLUDED.uwi, wells.uwi),
                field = COALESCE(EXCLUDED.field, wells.field),
                operator = COALESCE(EXCLUDED.operator, wells.operator),
                notes = COALESCE(EXCLUDED.notes, wells.notes),
                current_rig_id = CASE WHEN $7 THEN $6 ELSE wells.current_rig_id END,
+               uuid = EXCLUDED.uuid,
                updated_at = now()`,
         [well.name, well.uwi || null, well.field || null, well.operator || null, well.notes || null,
-            current ? rigId : null, !!current]);
+            current ? rigId : null, !!current, ids.well(well.name)]);
+    // One wellbore per well (a workover re-enters the existing hole).
+    await tsdb.query(
+        `INSERT INTO wellbores (uuid, well_id, name, number) VALUES ($1, $2, $2, '1')
+         ON CONFLICT (uuid) DO NOTHING`, [ids.wellbore(well.name), well.name]);
 }
 
 /** A well was started on this rig: open its run. */
@@ -70,12 +76,13 @@ async function startRun(well) {
     if (!well || !well.startedAt) return null;
     await upsertWell(well, { current: true });
     const { rows } = await tsdb.query(
-        `INSERT INTO well_runs (well_id, rig_id, job_no, started_at, ended_at, edge_well_ref)
-         VALUES ($1, $2, $3, $4, NULL, $5)
+        `INSERT INTO well_runs (well_id, rig_id, job_no, started_at, ended_at, edge_well_ref, uuid)
+         VALUES ($1, $2, $3, $4, NULL, $5, $6)
          ON CONFLICT (edge_well_ref) WHERE edge_well_ref IS NOT NULL
-         DO UPDATE SET started_at = EXCLUDED.started_at, ended_at = NULL, well_id = EXCLUDED.well_id
+         DO UPDATE SET started_at = EXCLUDED.started_at, ended_at = NULL, well_id = EXCLUDED.well_id, uuid = EXCLUDED.uuid
          RETURNING id`,
-        [well.name, getRigId(), well.jobNo || well.name, well.startedAt, well.id]);
+        [well.name, getRigId(), well.jobNo || well.name, well.startedAt, well.id,
+            ids.rigUtilization(getRigId(), well.name, well.startedAt)]);
     return rows[0] ? rows[0].id : null;
 }
 

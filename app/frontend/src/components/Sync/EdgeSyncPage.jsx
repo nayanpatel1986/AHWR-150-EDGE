@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box, Typography, Paper, Grid, Button, TextField, Dialog, DialogTitle,
     DialogContent, DialogActions, Snackbar, Alert, Chip, Switch,
-    FormControlLabel, Divider
-} from '@mui/material';
+    FormControlLabel, Divider, MenuItem } from '@mui/material';
 import { RefreshCw, Cloud, HeartPulse, Download, Settings, Zap, Radio } from 'lucide-react';
 import axios from '../../api';
 import { socket } from '../../socket';
@@ -285,7 +284,7 @@ export default function EdgeSyncPage() {
         }
     };
 
-    // ---- ETP 2.0 publisher (admin) ----
+    // ---- ETP v1.2 publisher (admin) ----
     const setEtpConfig = async (body, successMsg) => {
         if (!isAdmin) return;
         setEtpSaving(true);
@@ -311,6 +310,9 @@ export default function EdgeSyncPage() {
             url: etp.url || '',
             deviceId: etp.deviceId || '',
             token: '',
+            mode: etp.mode || 'store',
+            authScheme: etp.authScheme || 'basic',
+            backfillHours: etp.backfillHours ?? 24,
             streamSeconds: etp.streamSeconds ?? 5,
         });
         setEtpCfgOpen(true);
@@ -322,6 +324,9 @@ export default function EdgeSyncPage() {
             enabled: !!etpCfgDraft.enabled,
             url: etpCfgDraft.url.trim(),
             deviceId: etpCfgDraft.deviceId.trim(),
+            mode: etpCfgDraft.mode,
+            authScheme: etpCfgDraft.authScheme,
+            backfillHours: Number(etpCfgDraft.backfillHours) || 0,
             streamSeconds: Number(etpCfgDraft.streamSeconds) || 5,
         };
         if (etpCfgDraft.token !== '') body.token = etpCfgDraft.token;
@@ -359,6 +364,8 @@ export default function EdgeSyncPage() {
         downloadXml(`/api/witsml/log?minutes=${n}`, 'witsml-log.xml');
     };
     const downloadWell = () => downloadXml('/api/witsml/well', 'witsml-well.xml');
+    // WITSML 2.1 objects of the active well (lib/witsml21.js); the channel set carries the run's data.
+    const download21 = (kind) => downloadXml(`/api/witsml21/${kind}${kind === 'channelset' ? '?data=1' : ''}`, `witsml21-${kind}.xml`);
 
     const components = Array.isArray(health?.components) ? health.components : [];
     const missing = Array.isArray(health?.missing) ? health.missing : [];
@@ -511,12 +518,12 @@ export default function EdgeSyncPage() {
                 )}
             </Paper>
 
-            {/* ---- ETP 2.0 publisher panel ---- */}
+            {/* ---- ETP v1.2 publisher panel ---- */}
             <Paper sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Radio size={18} /> ETP 2.0 Publisher
+                            <Radio size={18} /> ETP v1.2 Publisher
                         </Typography>
                         <EtpStateChip status={etp} />
                     </Box>
@@ -548,7 +555,7 @@ export default function EdgeSyncPage() {
                 </Box>
 
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
-                    ETP 2.0 (Energistics) outbound channel streaming — JSON-encoded subset; read-only publish to the central CRMF.
+                    ETP v1.2 (Energistics), binary Avro. Store mode loads the CRMF store without loss (Store + ChannelDataLoad, resumes after outages); producer mode is a ChannelStreaming simple streamer for third-party consumers. WITSML 2.1 channels with PWLS property kinds; outbound only.
                 </Typography>
 
                 {etp?.lastError && (
@@ -562,7 +569,10 @@ export default function EdgeSyncPage() {
                     <Grid item xs={6} sm={4} md={2}><StatTile label="Device ID" value={etp?.deviceId || '--'} /></Grid>
                     <Grid item xs={6} sm={4} md={2}><StatTile label="Token" value={etp?.tokenSet ? 'Set' : 'Not set'} /></Grid>
                     <Grid item xs={6} sm={4} md={2}><StatTile label="Subprotocol" value={etp?.subprotocol || '--'} /></Grid>
+                    <Grid item xs={6} sm={4} md={2}><StatTile label="Mode" value={etp?.mode === 'producer' ? 'Producer (P1)' : 'Store (P4+P22)'} /></Grid>
                     <Grid item xs={6} sm={4} md={2}><StatTile label="Channels" value={fmtInt(etp?.channels)} /></Grid>
+                    <Grid item xs={6} sm={4} md={2}><StatTile label="Objects Put" value={fmtInt(etp?.objectsPut)} /></Grid>
+                    <Grid item xs={6} sm={4} md={3}><StatTile label="Data Sent Up To" value={etp?.lastDataTime ? `${timeAgo(etp.lastDataTime)}${etp.backfilling ? ' (catching up)' : ''}` : '--'} /></Grid>
                     <Grid item xs={6} sm={4} md={3}><StatTile label="Frames Sent" value={fmtInt(etp?.framesSent)} color="success.main" /></Grid>
                     <Grid item xs={6} sm={4} md={3}><StatTile label="Data Points Sent" value={fmtInt(etp?.dataPointsSent)} color="success.main" /></Grid>
                     <Grid item xs={6} sm={4} md={3}><StatTile label="Last Sent" value={timeAgo(etp?.lastSentAt)} /></Grid>
@@ -573,10 +583,10 @@ export default function EdgeSyncPage() {
             {/* ---- WITSML export panel ---- */}
             <Paper sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Download size={18} /> WITSML 1.4.1 Export
+                    <Download size={18} /> WITSML Export
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                    Download standards-compliant WITSML XML for the log (last N minutes) and the well header.
+                    WITSML 1.4.1.1: the log (last N minutes) and the well header.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
                     <TextField
@@ -597,6 +607,17 @@ export default function EdgeSyncPage() {
                         sx={{ color: '#38bdf8', borderColor: 'divider', textTransform: 'none' }}>
                         Download Well XML
                     </Button>
+                </Box>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 2.5, mb: 1.5 }}>
+                    WITSML 2.1 (active well): objects with Energistics identifiers, units and PWLS property kinds. The channel set includes the run's data (up to the export row limit).
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                    {[['well', 'Well'], ['wellbore', 'Wellbore'], ['rigutilization', 'Rig Utilization'], ['log', 'Log'], ['channelset', 'Channel Set + Data']].map(([kind, label]) => (
+                        <Button key={kind} variant="outlined" size="small" startIcon={<Download size={14} />} onClick={() => download21(kind)} disabled={downloading}
+                            sx={{ color: '#38bdf8', borderColor: 'divider', textTransform: 'none' }}>
+                            {label}
+                        </Button>
+                    ))}
                 </Box>
             </Paper>
 
@@ -660,9 +681,9 @@ export default function EdgeSyncPage() {
                 </DialogActions>
             </Dialog>
 
-            {/* ---- ETP 2.0 config dialog (admin) ---- */}
+            {/* ---- ETP v1.2 config dialog (admin) ---- */}
             <Dialog open={etpCfgOpen} onClose={() => setEtpCfgOpen(false)} PaperProps={{ sx: { bgcolor: 'background.paper', color: 'text.primary', minWidth: 520 } }}>
-                <DialogTitle>ETP 2.0 Publisher Configuration</DialogTitle>
+                <DialogTitle>ETP v1.2 Publisher Configuration</DialogTitle>
                 <DialogContent>
                     {etpCfgDraft && (
                         <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -693,6 +714,37 @@ export default function EdgeSyncPage() {
                                     InputLabelProps={{ shrink: true }}
                                     value={etpCfgDraft.token}
                                     onChange={(e) => setEtpCfgDraft((d) => ({ ...d, token: e.target.value }))}
+                                    sx={fieldSx}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField label="Mode" select fullWidth size="small"
+                                    value={etpCfgDraft.mode}
+                                    onChange={(e) => setEtpCfgDraft((d) => ({ ...d, mode: e.target.value }))}
+                                    helperText={etpCfgDraft.mode === 'store' ? 'CRMF store: lossless, resumes after outages' : 'ChannelStreaming simple streamer'}
+                                    sx={fieldSx}
+                                >
+                                    <MenuItem value="store">Store (Store 4 + ChannelDataLoad 22)</MenuItem>
+                                    <MenuItem value="producer">Producer (ChannelStreaming 1)</MenuItem>
+                                </TextField>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField label="Authorization" select fullWidth size="small"
+                                    value={etpCfgDraft.authScheme}
+                                    onChange={(e) => setEtpCfgDraft((d) => ({ ...d, authScheme: e.target.value }))}
+                                    helperText={etpCfgDraft.authScheme === 'basic' ? 'Device ID + token (CRMF)' : 'Bearer token'}
+                                    sx={fieldSx}
+                                >
+                                    <MenuItem value="basic">Basic (device ID : token)</MenuItem>
+                                    <MenuItem value="bearer">Bearer token</MenuItem>
+                                </TextField>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <TextField label="Backfill Hours" type="number" fullWidth size="small"
+                                    inputProps={{ min: 0, max: 720, step: 1 }}
+                                    helperText="Store mode: how far back to send when the store has no data"
+                                    value={etpCfgDraft.backfillHours}
+                                    onChange={(e) => setEtpCfgDraft((d) => ({ ...d, backfillHours: e.target.value }))}
                                     sx={fieldSx}
                                 />
                             </Grid>

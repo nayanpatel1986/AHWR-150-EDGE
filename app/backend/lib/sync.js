@@ -11,6 +11,7 @@ const http = require('http');
 const https = require('https');
 const { readJson, writeJson, DATA_DIR } = require('./persist');
 const wells = require('./wells');
+const transport = require('./transport');
 
 const SCHEMA_VERSION = '1.0';
 const CONFIG_FILE = 'sync_config.json';
@@ -156,6 +157,13 @@ function seal(nowMs = Date.now()) {
         createdAt: new Date(nowMs).toISOString(),
         channels: currentBatch.channels, events: currentBatch.events,
     };
+    const dict = dictionaryPayload();
+    if (dict) {
+        batch.dictionary = dict.list;
+        batch.loggingCompany = process.env.WITSML_LOGGING_COMPANY || config.deviceId;
+        dictionarySentHash = dict.hash;   // buffered: delivered (and replayed) with this batch
+        dictionarySentAt = Date.now();
+    }
     const fname = `batch-${String(seq).padStart(9, '0')}-${String(points).padStart(6, '0')}.json.gz`;
     try {
         const body = config.compression ? zlib.gzipSync(Buffer.from(JSON.stringify(batch))) : Buffer.from(JSON.stringify(batch));
@@ -184,6 +192,9 @@ function prune() {
 function postBatch(buf, seq) {
     return new Promise((resolve) => {
         let u; try { u = new URL('/ingest', config.centralUrl); } catch { return resolve({ ok: false, err: 'bad centralUrl' }); }
+        // The batch carries the device token: never send it unencrypted.
+        const insecure = transport.insecureReason(config.centralUrl, transport.HTTP);
+        if (insecure) return resolve({ ok: false, err: `central URL refused: ${insecure}` });
         const lib = u.protocol === 'https:' ? https : http;
         const headers = {
             'Content-Type': 'application/json', 'Content-Encoding': config.compression ? 'gzip' : 'identity',
@@ -340,6 +351,7 @@ function getStatus() {
 
 function getConfig() { const { deviceToken, ...safe } = config; return { ...safe, deviceTokenSet: !!deviceToken }; }
 async function setConfig(next) {
+    if (next && next.centralUrl) transport.assertSecure(next.centralUrl, transport.HTTP, 'Central URL');
     const allow = ['enabled', 'centralUrl', 'deviceId', 'deviceToken', 'batchSeconds', 'maxBufferDays', 'compression', 'flushBatchesPerCycle', 'flushIntervalMs', 'flushIntervalSec'];
     for (const k of allow) if (k in (next || {})) config[k] = next[k];
     config.batchSeconds = Math.max(1, Number(config.batchSeconds) || 10);
@@ -370,8 +382,26 @@ function scheduleTimers() {
     sealTimer = setInterval(() => { if (Date.now() - lastSealMs >= config.batchSeconds * 1000) seal(); }, Math.max(MIN_SYNC_INTERVAL_MS, config.batchSeconds * 1000));
 }
 
-function start(ioRef) {
+// Channel dictionary (lib/channels.js) for the CMF's WITSML 2.1 / ETP objects:
+// sent with the first batch, whenever it changes, and at least every 6 hours.
+let getChannels = () => new Map();
+let dictionarySentHash = null;
+let dictionarySentAt = 0;
+const DICTIONARY_REFRESH_MS = 6 * 3600 * 1000;
+function dictionaryPayload() {
+    const list = [...getChannels().values()].map((c) => ({
+        metric: c.metric, mnemonic: c.mnemonic, label: c.label, group: c.group, storedUnit: c.storedUnit, uom: c.uom,
+        factor: c.factor, dataKind: c.dataKind, propertyKind: c.propertyKind, unitSource: c.unitSource,
+    }));
+    if (!list.length) return null;
+    const hash = require('crypto').createHash('sha1').update(JSON.stringify(list)).digest('hex');
+    if (hash === dictionarySentHash && Date.now() - dictionarySentAt < DICTIONARY_REFRESH_MS) return null;
+    return { list, hash };
+}
+
+function start(ioRef, opts = {}) {
     io = ioRef;
+    if (typeof opts.getChannels === 'function') getChannels = opts.getChannels;
     if (config.enabled && config.centralUrl) {
         setTimeout(() => { flush({ heartbeatWhenEmpty: true }).catch(() => {}); }, 1000);
     }

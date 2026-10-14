@@ -1,4 +1,4 @@
-﻿{
+{
     "enabled":  true,
     "endpoint":  "opc.tcp://localhost:49320",
     "securityMode":  "None",

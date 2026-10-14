@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@influxdata/influxdb-client": "^1.33.2",
+    "avsc": "^5.7.7",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -17,13 +18,15 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "ldapts": "^8.1.8",
+    "pg": "^8.13.1",
     "socket.io": "^4.7.2",
-    "socket.io-client": "^4.7.2"
+    "socket.io-client": "^4.7.2",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
   },
   "overrides": {
-    "ws": "^8.21.0"
+    "ws": "$ws"
   }
 }

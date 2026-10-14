@@ -6,7 +6,7 @@ Included:
 - Backend application
 - Frontend dashboard build
 - Telegraf runtime and S7 collector configuration
-- InfluxDB runtime and database files
+- PostgreSQL + TimescaleDB runtime and database files (data\pgdata)
 - Python runtime and BOP / OPC UA collector dependencies
 - Node.js runtime
 - AHWR-EDGE rig image and Start/Stop shortcut icon
@@ -15,7 +15,7 @@ Included:
 - Users and login data
 - settings.env, including tokens and OPC UA credentials
 - Current application configuration and historian data copied while services were stopped
-- Main live PLC bucket retention set to 180 days
+- Full-rate telemetry kept 90 days; 1-minute history kept indefinitely
 
 Install on the offline PC:
 1. Extract the TAR.GZ so this folder becomes your AHWR-EDGE install folder.
@@ -53,7 +53,7 @@ PLC reachable but data not showing:
 1. Open C:\AHWR-EDGE.
 2. Right-click Check-AHWR-EDGE-PLC.ps1.
 3. Choose Run with PowerShell.
-4. Check the PLC TCP result, recent Telegraf errors, and latest AHWR InfluxDB points shown in the window.
+4. Check the PLC TCP result, recent Telegraf errors, and latest TimescaleDB telemetry shown in the window.
 
 For access from another device on the same reachable network, open:
    http://SERVER_IP:8080
@@ -62,4 +62,4 @@ Important:
 - Keep this package private. It contains credentials, tokens, users, and historian data.
 - The start script uses its own folder for app, data, frontend, Telegraf, and BOP paths.
 - If another AHWR-EDGE already exists on the offline PC, stop it first and keep a backup before replacing it.
-- The main live PLC history bucket keeps 180 days of full-rate data.
+- Full-rate telemetry is kept 90 days; the 1-minute history is kept indefinitely.

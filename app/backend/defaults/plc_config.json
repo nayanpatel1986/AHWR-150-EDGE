@@ -483,22 +483,6 @@
               "address": "DB3591.B0"
             },
             {
-              "name": "ACS Actual Block Position",
-              "address": "DB174.R150"
-            },
-            {
-              "name": "ACS Crownsaver in mm",
-              "address": "DB65.R6"
-            },
-            {
-              "name": "ACS floorsaver in mm",
-              "address": "DB65.R12"
-            },
-            {
-              "name": "ACS Bottomsaver in mm",
-              "address": "DB65.R18"
-            },
-            {
               "name": "PDW ACT PRESSURE",
               "address": "DB174.R222"
             }

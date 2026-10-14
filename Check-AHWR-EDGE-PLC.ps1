@@ -3,7 +3,11 @@ $ErrorActionPreference = 'Continue'
 $Root = $PSScriptRoot
 $SettingsFile = Join-Path $Root 'settings.env'
 $PlcConfig = Join-Path $Root 'data\app\plc_config.json'
-$InfluxCli = Join-Path $Root 'runtime\influx\influx.exe'
+$Psql = Join-Path $Root 'runtime\pgsql\bin\psql.exe'
+if (-not (Test-Path -LiteralPath $Psql)) {
+    $installed = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\psql.exe' -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+    if ($installed) { $Psql = $installed.FullName }
+}
 
 Write-Host 'AHWR-EDGE PLC/data diagnostic' -ForegroundColor Cyan
 Write-Host "Root: $Root"
@@ -35,7 +39,7 @@ if (Test-Path -LiteralPath $PlcConfig) {
 
 Write-Host ''
 Write-Host 'Process check:' -ForegroundColor Cyan
-foreach ($pidFileName in @('influxdb.pid', 'telegraf.pid', 'backend.pid', 'bop-collector.pid')) {
+foreach ($pidFileName in @('telegraf.pid', 'backend.pid', 'bop-collector.pid')) {
     $pidFile = Join-Path $Root "run\$pidFileName"
     if (Test-Path -LiteralPath $pidFile) {
         $pidValue = (Get-Content -LiteralPath $pidFile -Raw).Trim()
@@ -88,22 +92,27 @@ foreach ($log in @($telegrafErr, $telegrafLog)) {
 }
 
 Write-Host ''
-Write-Host 'InfluxDB latest AHWR points:' -ForegroundColor Cyan
-if (Test-Path -LiteralPath $InfluxCli) {
-    $query = @'
-from(bucket: "romii_bucket")
-  |> range(start: -10m)
-  |> filter(fn: (r) => r._measurement == "AHWR")
-  |> limit(n: 10)
-'@
+Write-Host 'TimescaleDB latest telemetry (this rig):' -ForegroundColor Cyan
+if (Test-Path -LiteralPath $Psql) {
+    $pgHost = if ($env:PGHOST) { $env:PGHOST } else { '127.0.0.1' }
+    $pgPort = if ($env:PGPORT) { $env:PGPORT } else { '5432' }
+    $pgDb = if ($env:PGDATABASE) { $env:PGDATABASE } else { 'ahwr_edge' }
+    $pgUser = if ($env:PGUSER) { $env:PGUSER } else { 'ahwr_app' }
+    $rig = $env:DEVICE_ID -replace "'", ''
+    $query = @"
+SELECT count(DISTINCT metric) AS metrics_last_minute, max(ts) AS newest_sample, now() AS db_time
+FROM telemetry WHERE rig_id = '$rig' AND ts > now() - interval '1 minute';
+SELECT metric, round(value::numeric, 3) AS value, ts FROM telemetry
+WHERE rig_id = '$rig' AND ts > now() - interval '1 minute' ORDER BY ts DESC LIMIT 10;
+"@
     try {
-        & $InfluxCli query --host 'http://127.0.0.1:8086' --org $env:INFLUX_ORG --token $env:INFLUX_TOKEN $query
+        & $Psql -X -h $pgHost -p $pgPort -U $pgUser -d $pgDb -c $query
     } catch {
-        Write-Host "Influx query failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "TimescaleDB query failed: $($_.Exception.Message)" -ForegroundColor Red
     }
 } else {
-    Write-Host "Missing Influx CLI: $InfluxCli" -ForegroundColor Red
+    Write-Host 'psql not found (runtime\pgsql\bin or C:\Program Files\PostgreSQL\*\bin).' -ForegroundColor Red
 }
 
 Write-Host ''
-Write-Host 'If PLC TCP is OK but no AHWR points appear, read the Telegraf error lines above first.' -ForegroundColor Yellow
+Write-Host 'If PLC TCP is OK but no telemetry appears, read the Telegraf error lines above first.' -ForegroundColor Yellow

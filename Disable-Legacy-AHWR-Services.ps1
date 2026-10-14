@@ -19,7 +19,8 @@ foreach ($name in $legacyNames) {
     if (-not $service) { continue }
 
     $servicePath = [string]$service.PathName
-    $isCurrentInstall = $servicePath.IndexOf($CurrentRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0
+    # Trailing backslash: C:\AHWR-EDGE is not part of an install in C:\AHWR.
+    $isCurrentInstall = $servicePath.IndexOf($CurrentRoot + '\', [StringComparison]::OrdinalIgnoreCase) -ge 0
     if ($isCurrentInstall) {
         Write-Host "Keeping current-install service $name." -ForegroundColor Green
         continue

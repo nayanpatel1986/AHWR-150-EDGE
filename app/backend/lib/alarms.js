@@ -3,6 +3,7 @@
 // Per-tag setpoints (HiHi/Hi/Lo/LoLo) with deadband + on-delay, a state machine
 // (UNACK -> ACK -> return-to-normal), acknowledge, first-out, and an event log.
 const { readJson, writeJson, resolvePath } = require('./persist');
+const units = require('./units');
 
 const CONFIG_FILE = 'alarms_config.json';
 const EVENTS_FILE = 'alarms_events.json';
@@ -15,7 +16,7 @@ const DEFAULT_CONFIG = [
     { key: 'esd_active', dataKey: 'safety.esd_active', label: 'EMERGENCY SHUTDOWN ACTIVE', unit: '', hi: 1, deadband: 0, onDelaySec: 0, priority: 'P1', enabled: true },
     { key: 'lockout_active', dataKey: 'safety.lockout_active', label: 'EQUIPMENT LOCKOUT ACTIVE', unit: '', hi: 1, deadband: 0, onDelaySec: 0, priority: 'P1', enabled: true },
     { key: 'hookload_hi', dataKey: 'drawworks.hook_load', label: 'Hook Load High', unit: 't', hi: 180, hiHi: 200, deadband: 2, onDelaySec: 2, priority: 'P1', enabled: true },
-    { key: 'spp_hi', dataKey: 'mudpump.pressure', label: 'Pump / Standpipe Pressure High', unit: 'bar', hi: 240, hiHi: 300, deadband: 5, onDelaySec: 2, priority: 'P2', enabled: true },
+    { key: 'spp_hi', dataKey: 'mudpump.pressure', label: 'Pump / Standpipe Pressure High', unit: 'psi', hi: 3480, hiHi: 4350, deadband: 75, onDelaySec: 2, priority: 'P2', enabled: true },
     { key: 'tubing_hi', dataKey: 'wellhead.tubing_pressure', label: 'Tubing Pressure High', unit: 'bar', hi: 200, hiHi: 250, deadband: 5, onDelaySec: 2, priority: 'P1', enabled: true },
     { key: 'casing_hi', dataKey: 'wellhead.casing_pressure', label: 'Casing Pressure High', unit: 'bar', hi: 150, hiHi: 200, deadband: 5, onDelaySec: 2, priority: 'P1', enabled: true },
     { key: 'accumulator_lo', dataKey: 'well_control.accumulator_pressure', label: 'BOP Accumulator Low', unit: 'psi', lo: 2800, loLo: 2500, deadband: 25, onDelaySec: 3, priority: 'P1', enabled: true },
@@ -24,6 +25,29 @@ const DEFAULT_CONFIG = [
     { key: 'eng_oilpress_lo', dataKey: 'cat_engine.oil_pressure', label: 'Engine Oil Pressure Low', unit: 'bar', lo: 30, loLo: 20, deadband: 1, onDelaySec: 3, priority: 'P2', enabled: true },
     { key: 'eng_coolant_hi', dataKey: 'cat_engine.coolant_temp', label: 'Engine Coolant Temp High', unit: '°C', hi: 100, hiHi: 110, deadband: 1, onDelaySec: 5, priority: 'P2', enabled: true },
 ];
+
+const LIMIT_KEYS = ['hi', 'hiHi', 'lo', 'loLo'];
+
+// Validate one alarm definition. Returns an error string, or null when valid.
+// A malformed entry used to throw inside evaluate() on every poll cycle.
+function alarmEntryError(c, index) {
+    const at = `alarm[${index}]`;
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return `${at} must be an object`;
+    if (typeof c.key !== 'string' || !c.key.trim()) return `${at}.key is required`;
+    if (typeof c.dataKey !== 'string' || !/^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/.test(c.dataKey)) {
+        return `${at}.dataKey must be a dotted path like drawworks.hook_load`;
+    }
+    if (!(c.priority in PRIORITY_RANK)) return `${at}.priority must be P1, P2 or P3`;
+    for (const k of LIMIT_KEYS) {
+        if (c[k] != null && !Number.isFinite(c[k])) return `${at}.${k} must be a number or null`;
+    }
+    if (!LIMIT_KEYS.some((k) => c[k] != null)) return `${at} needs at least one of hi, hiHi, lo, loLo`;
+    for (const k of ['deadband', 'onDelaySec']) {
+        if (c[k] != null && (!Number.isFinite(c[k]) || c[k] < 0)) return `${at}.${k} must be a non-negative number`;
+    }
+    if (typeof c.enabled !== 'boolean') return `${at}.enabled must be true or false`;
+    return null;
+}
 
 let config = null;
 const active = new Map();   // key -> alarm record
@@ -42,6 +66,24 @@ function load() {
         const added = DEFAULT_CONFIG.filter((c) => !have.has(c.key));
         if (added.length) { config = [...added, ...config]; writeJson(CONFIG_FILE, config).catch(() => {}); }
     }
+    // Standpipe pressure is presented in psi: limits saved in the stored unit (bar)
+    // become the same thresholds in psi, once.
+    let converted = false;
+    config = config.map((c) => {
+        const p = c && units.presentation(c.dataKey);
+        if (!p || c.unit !== p.stored) return c;
+        converted = true;
+        const next = { ...c, unit: p.unit };
+        for (const k of [...LIMIT_KEYS, 'deadband']) if (Number.isFinite(c[k])) next[k] = Math.round(c[k] * p.factor);
+        return next;
+    });
+    if (converted) writeJson(CONFIG_FILE, config).catch(() => {});
+    // Never let a hand-edited/corrupt entry on disk break evaluation; skip it loudly.
+    config = config.filter((c, i) => {
+        const err = alarmEntryError(c, i);
+        if (err) console.error(`Ignoring invalid alarm definition: ${err}`);
+        return !err;
+    });
     events = readJson(EVENTS_FILE, []);
     if (!Array.isArray(events)) events = [];
 }
@@ -80,7 +122,10 @@ function evaluate(data, nowMs) {
             const at = Date.parse(data._fieldTimes[c.dataKey]);
             if (!Number.isFinite(at) || nowMs - at > 10000) continue;
         }
-        const value = Number(raw);
+        // Limits are in the presented unit (psi for standpipe pressure) unless the
+        // entry says the stored unit.
+        const p = units.presentation(c.dataKey);
+        const value = Number(p && c.unit !== p.stored ? units.present(c.dataKey, raw) : raw);
         const existing = active.get(c.key);
         if (raw == null || !Number.isFinite(value)) { continue; } // no/stale data -> leave as-is
 
@@ -150,6 +195,13 @@ const getHistory = (limit = 200) => events.slice(-limit).reverse();
 const getConfig = () => config;
 async function setConfig(next) {
     if (!Array.isArray(next)) throw Object.assign(new Error('config must be an array'), { status: 400 });
+    const seen = new Set();
+    next.forEach((c, i) => {
+        const err = alarmEntryError(c, i);
+        if (err) throw Object.assign(new Error(err), { status: 400 });
+        if (seen.has(c.key)) throw Object.assign(new Error(`duplicate alarm key: ${c.key}`), { status: 400 });
+        seen.add(c.key);
+    });
     config = next;
     await writeJson(CONFIG_FILE, config);
     return config;

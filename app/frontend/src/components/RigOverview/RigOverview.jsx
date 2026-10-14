@@ -47,7 +47,7 @@ const DEFAULT_BOTTOM_STATS = [
             { id: 'p1_1', label: 'FLOW IN', dataKey: 'flow_in', unit: 'Lt/min' },
             { id: 'p1_2', label: 'FLOW OUT', dataKey: 'flow_out', unit: '%' },
             { id: 'p1_3', label: 'ROP', dataKey: 'rop', unit: 'm/h' },
-            { id: 'p1_4', label: 'SPP', dataKey: 'pump_pressure', unit: 'Bar' },
+            { id: 'p1_4', label: 'SPP', dataKey: 'pump_pressure', unit: 'psi' },
             { id: 'p1_5', label: 'TOTAL STROKES', dataKey: 'total_strokes', unit: '' }
         ]
     },
@@ -740,7 +740,7 @@ export default function RigOverview() {
                                             whiteSpace: 'nowrap'
                                         }}
                                     >
-                                        {['cat_rpm', 'htd_rpm', 'cat_load', 'htd_torque', 'ahtd_torque', 'spm', 'rop', 'SPP-Bar', 'pump_pressure', 'block_position'].includes(s.dataKey) ? Math.round(Number(rigData[s.dataKey] || 0)) : Number(rigData[s.dataKey] || 0).toFixed(2)}
+                                        {['SPP-Bar', 'pump_pressure'].includes(s.dataKey) && s.unit !== 'Bar' && s.unit !== 'bar' ? Math.round(Number(rigData[s.dataKey] || 0) * 14.50377) : ['cat_rpm', 'htd_rpm', 'cat_load', 'htd_torque', 'ahtd_torque', 'spm', 'rop', 'block_position'].includes(s.dataKey) ? Math.round(Number(rigData[s.dataKey] || 0)) : Number(rigData[s.dataKey] || 0).toFixed(2)}
                                         <span style={{ color: '#94a3b8', fontSize: '0.8rem', fontWeight: '600' }}>
                                             {s.unit}
                                         </span>
@@ -962,7 +962,21 @@ export default function RigOverview() {
         const value = Number(rigData.bop?.[key]);
         return Number.isFinite(value) ? `${value.toFixed(2)}${unit ? ` ${unit}` : ''}` : '--';
     };
-    const bopBool = (key) => rigData.bop?.[key] === null || rigData.bop?.[key] === undefined ? '--' : (Number(rigData.bop[key]) > 0 ? 'OPEN' : 'CLOSED');
+    // Ram state from BOTH limit signals (same rule as the console overview). Reading a
+    // single *_close signal and calling "true" OPEN showed every ram inverted.
+    const bopRam = (prefix) => {
+        const flag = (key) => {
+            const v = rigData.bop?.[key];
+            return v === null || v === undefined ? null : Number(v) > 0;
+        };
+        const closed = flag(`${prefix}_close`);
+        const open = flag(`${prefix}_open`);
+        if (closed && open) return 'FAULT';
+        if (closed) return 'CLOSED';
+        if (open) return 'OPEN';
+        if (closed === false && open === false) return 'IN TRANSIT';
+        return '--';
+    };
     const pctClampStatus = (value) => getStatusLabel('cwk_clamp_status', value) || { label: 'NONE', color: '#94a3b8' };
     const dollyValue = Number(rigData.pct_dolly_status);
     const dollyLabels = ['NONE', 'OUT PARK', 'MOVE WORK', 'MOVE PARK', 'IN PARK', 'FAULT', 'IN WORK'];
@@ -1152,9 +1166,9 @@ export default function RigOverview() {
                     <Typography sx={{ color: '#64748b', fontSize: 11, mb: 1 }}>SOURCE: {String(rigData.bop?.source || 'VERSAMAX').toUpperCase()}</Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0.85, flex: 1 }}>
                         {[
-                            ['ANNULAR', bopBool('annular_close')],
-                            ['UPPER RAM', bopBool('upper_ram_close')],
-                            ['LOWER RAM', bopBool('lower_ram_close')],
+                            ['ANNULAR', bopRam('annular')],
+                            ['UPPER RAM', bopRam('upper_ram')],
+                            ['LOWER RAM', bopRam('lower_ram')],
                             ['ACCUMULATOR', bopNumber('accumulator_pressure', 'PSI')],
                             ['MANIFOLD', bopNumber('manifold_pressure', 'PSI')],
                             ['ANNULAR PRESS', bopNumber('annular_pressure', 'PSI')]

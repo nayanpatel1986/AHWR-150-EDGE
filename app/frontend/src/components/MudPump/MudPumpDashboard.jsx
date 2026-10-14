@@ -134,7 +134,7 @@ export default function MudPumpDashboard() {
                             <ValueTile label="Pump SPM" value={pumpData.spm} unit="SPM" color="#ec4899" min={0} max={200} surface={surface} border={border} />
                         </Grid>
                         <Grid item xs={6} sm={4} md={2}>
-                            <ValueTile label="Pressure" value={pumpData.pressure} unit="bar" color="#ef4444" min={0} max={500} warn={350} crit={420} surface={surface} border={border} />
+                            <ValueTile label="Pressure" value={pumpData.pressure == null ? pumpData.pressure : Number(pumpData.pressure) * 14.5037738} unit="psi" color="#ef4444" min={0} max={7250} warn={5075} crit={6090} surface={surface} border={border} />
                         </Grid>
                         <Grid item xs={6} sm={4} md={2}>
                             <ValueTile label="FLOW OUT" value={pumpData.flow_out} unit="%" color="#22c55e" min={0} max={100} surface={surface} border={border} />

@@ -11,9 +11,9 @@ Get-Content -LiteralPath (Join-Path $projectRoot 'settings.env') | ForEach-Objec
 }
 $env:DATA_DIR = Join-Path $projectRoot 'data\app'
 $env:FRONTEND_DIST_DIR = Join-Path $projectRoot 'app\frontend\dist'
-$env:TELEGRAF_CONFIG_PATH = Join-Path $projectRoot 'app\telegraf\telegraf.conf'
+$env:TELEGRAF_CONFIG_PATH = Join-Path $projectRoot 'app\telegraf\telegraf.d\plc.conf'
 $env:BOP_CONFIG_PATH = Join-Path $projectRoot 'data\app\bop_config.json'
-$env:INFLUX_URL = 'http://127.0.0.1:8086'
+if (-not $env:PGHOST) { $env:PGHOST = '127.0.0.1' }
 $listener = Get-NetTCPConnection -State Listen -LocalPort 8080 -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener -or (Test-Path -LiteralPath $pidFile)) {
     # An offline archive can contain a PID from its source PC. Prefer the actual

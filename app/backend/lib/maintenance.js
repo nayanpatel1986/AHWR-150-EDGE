@@ -3,6 +3,7 @@
 // maintenance schedule with due/overdue tracking, calibration history, and a
 // downtime/failure log with reason codes. State persists under DATA_DIR.
 const { readJson, writeJson, resolvePath } = require('./persist');
+const units = require('./units');
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : NaN; };
 const nowIso = (ms) => new Date(ms).toISOString();
@@ -19,7 +20,7 @@ const ASSETS = [
     { id: 'hpu', name: 'Hydraulic Power Unit', category: 'Hydraulics', hoursKey: 'hpu.run_hours', health: [['Oil Temp °C', 'hpu.oil_temp'], ['Disch bar', 'hpu.discharge_pressure']] },
     { id: 'topdrive', name: 'Top Drive (HTD)', category: 'Rotary', hoursKey: 'htd.working_hours', health: [['RPM', 'htd.rpm'], ['Torque', 'htd.torque']] },
     { id: 'drawworks', name: 'Drawworks', category: 'Hoisting', hoursKey: null, seedHours: 3850, accrue: 'hoisting', health: [['Hook Load t', 'drawworks.hook_load'], ['Rope wear', 'drawworks.rope_wear']] },
-    { id: 'mudpump', name: 'Mud Pump', category: 'Circulating', hoursKey: null, seedHours: 3620, accrue: 'pumping', health: [['SPP bar', 'mudpump.pressure'], ['SPM', 'mudpump.spm']] },
+    { id: 'mudpump', name: 'Mud Pump', category: 'Circulating', hoursKey: null, seedHours: 3620, accrue: 'pumping', health: [['SPP psi', 'mudpump.pressure'], ['SPM', 'mudpump.spm']] },
 ];
 const ASSET = Object.fromEntries(ASSETS.map((a) => [a.id, a]));
 
@@ -111,7 +112,7 @@ function getSummary(data) {
         return {
             id: a.id, name: a.name, category: a.category, hours: Number(hours.toFixed(1)),
             source: a.hoursKey ? 'measured' : 'derived',
-            health: a.health.map(([label, key]) => ({ label, value: data ? num(resolvePath(data, key)) : null })),
+            health: a.health.map(([label, key]) => ({ label, value: data ? num(units.present(key, resolvePath(data, key))) : null })),
             pmStatus: tasks.length ? worst : 'ok', pmTasks: tasks.length,
             nextDueInHours: tasks.length ? Math.min(...tasks.map((t) => t.dueInHours)) : null,
             openDowntime: openDt.filter((d) => d.assetId === a.id).length,

@@ -5,6 +5,8 @@ import { Anchor, Activity, ArrowDown, ArrowUp, Clock, RefreshCw } from 'lucide-r
 import { isLiveRigPayload, socket } from '../../socket';
 import axios from '../../api';
 
+const BAR_TO_PSI = 14.5037738; // standpipe pressure is stored in bar, shown in psi
+
 // Semantic status colors (kept across all themes intentionally).
 const STATUS = { ok: '#22c55e', warn: '#fbbf24', fail: '#ef4444' };
 const ACCENT = '#fbbf24'; // fishing section accent
@@ -45,12 +47,12 @@ const FishingDashboard = () => {
         lastImpactLoad: 80 // tons
     });
 
-    // 4. Pressure & Pumping. Pump pressure is SPP-Bar from PLC DB3191.R72,
-    // normalized by the backend as mudpump.pressure.
+    // 4. Pressure & Pumping. Pump pressure is SPP-Bar from PLC DB3191.R72 (bar),
+    // normalized by the backend as mudpump.pressure and shown in psi.
     const [pressure, setPressure] = useState({
         tbg: 2500, // psi
         csg: 500,  // psi
-        pump: 0    // bar
+        pump: 0    // psi
     });
 
     // 5. HTD rotation
@@ -180,7 +182,7 @@ const FishingDashboard = () => {
             if (data.mudpump) {
                 setPressure(prev => ({
                     ...prev,
-                    pump: Number(data.mudpump.pressure ?? data.AHWR?.['SPP-Bar']) || 0
+                    pump: (Number(data.mudpump.pressure ?? data.AHWR?.['SPP-Bar']) || 0) * BAR_TO_PSI
                 }));
             }
             if (data.drilling) {
@@ -221,7 +223,7 @@ const FishingDashboard = () => {
     useEffect(() => {
         const newAlarms = [];
         if (overpull > 100) newAlarms.push({ id: 'overpull', msg: 'HIGH OVERPULL WARNING', severity: 'error' });
-        if (pressure.pump > 300) newAlarms.push({ id: 'pump', msg: 'PUMP OVERPRESSURE', severity: 'warning' });
+        if (pressure.pump > 4350) newAlarms.push({ id: 'pump', msg: 'PUMP OVERPRESSURE', severity: 'warning' });
         setAlarms(newAlarms);
     }, [overpull, pressure.pump]);
 
@@ -570,7 +572,7 @@ const FishingDashboard = () => {
                             <SectionTitle>Pump &amp; Rotation</SectionTitle>
                             <Grid container spacing={1.5}>
                                 <Grid item xs={6}>
-                                    <ValueTile label="Pump Press" value={pressure.pump} decimals={1} unit="bar" color="#f472b6" min={0} max={500} warn={240} crit={300} />
+                                    <ValueTile label="Pump Press" value={pressure.pump} decimals={0} unit="psi" color="#f472b6" min={0} max={5000} warn={3480} crit={4350} />
                                 </Grid>
                                 <Grid item xs={6}>
                                     <ValueTile label="HTD RPM" value={rotation.rpm} decimals={0} unit="rpm" color="#38bdf8" min={0} max={250} warn={200} crit={230} />

@@ -2,6 +2,7 @@
 const { io: ioClient } = require('socket.io-client');
 const { readJson, writeJsonSync } = require('./persist');
 const sync = require('./sync');
+const transport = require('./transport');
 
 const STORE_FILE = 'central_messages.json';
 const MAX_HISTORY = 500;
@@ -100,6 +101,12 @@ function receiveBatch(rows) {
 function connect() {
     const cfg = sync.getStatus();
     if (!cfg.enabled || !cfg.centralUrl || !cfg.deviceId) return;
+    const insecure = transport.insecureReason(cfg.centralUrl, transport.HTTP);
+    if (insecure) {
+        if (centralSocket) { centralSocket.disconnect(); centralSocket = null; currentKey = ''; }
+        console.warn(`[central-messages] not connecting: ${insecure}`);
+        return;
+    }
     const savedToken = readJson('sync_config.json', {})?.deviceToken || '';
     const token = savedToken || process.env.DEVICE_TOKEN || '';
     const nextKey = `${cfg.centralUrl}|${cfg.deviceId}|${token ? 'token' : 'no-token'}`;

@@ -8,7 +8,6 @@ const http = require('http');
 const { Server } = require("socket.io");
 const { InfluxDB } = require('@influxdata/influxdb-client');
 const fs = require('fs');
-const fsp = require('fs/promises');
 const path = require('path');
 const auth = require('./lib/auth');
 const validate = require('./lib/validate');
@@ -88,7 +87,10 @@ app.use(helmet({
     hsts: false,
 }));
 app.use(cors({ origin: allowedOrigin, methods: ['GET', 'POST'], credentials: true }));
-app.use(express.json({ limit: '1mb' }));
+// The history import route installs its own larger parser; the global 1 MB
+// parser must not consume (and 413) that body first.
+const defaultJsonParser = express.json({ limit: '1mb' });
+app.use((req, res, next) => (req.path === '/api/wells/import' ? next() : defaultJsonParser(req, res, next)));
 
 // Unauthenticated health checks (used by the Docker healthcheck / probes).
 app.get('/', (req, res) => {
@@ -121,11 +123,8 @@ const queryApi = new InfluxDB({
 }).getQueryApi(INFLUX_ORG);
 
 // --- Atomic JSON persistence (temp file + rename; off the hot loop) -------
-const writeJsonAtomic = async (file, obj) => {
-    const tmp = `${file}.${process.pid}.tmp`;
-    await fsp.writeFile(tmp, JSON.stringify(obj, null, 2));
-    await fsp.rename(tmp, file);
-};
+const { writeJsonFile } = require('./lib/persist');
+const writeJsonAtomic = (file, obj) => writeJsonFile(file, obj);
 const readJsonSync = (file, fallback) => {
     try { return JSON.parse(fs.readFileSync(file)); } catch { return fallback; }
 };
@@ -562,7 +561,15 @@ const queryData = async () => {
         const hasBopData = !!(data.bop && Object.keys(data.bop).length > 0);
         const hasRigSensorData = !!(data.drawworks || data.engine || data.mudpump || data.drilling || data.AHWR || data.hpu || data.cat_engine || data.cat_engine_2);
         const now = Date.now();
-        if (hasRigSensorData) lastDataAt = now;
+        // Freshness comes from the newest rig SAMPLE time, not from "a row came back":
+        // the -10s window + last() keeps returning a point for ~10 s after the feed
+        // stops, which delayed the stale flag to ~15 s.
+        if (hasRigSensorData) {
+            const newestRigSample = Object.entries(data._fieldTimes || {})
+                .filter(([key]) => !key.startsWith('bop.') && !key.startsWith('wellcontrol.'))
+                .reduce((max, [, t]) => Math.max(max, Date.parse(t) || 0), 0);
+            lastDataAt = Math.max(lastDataAt, Math.min(newestRigSample || now, now));
+        }
         const stale = (now - lastDataAt) > FRESH_MS;
 
         if (hasRigSensorData) {
@@ -596,9 +603,16 @@ const queryData = async () => {
 
         // Well control / BOP: present ONLY when a real source exists. Never
         // coalesce safety-critical ram/pressure signals to a benign false/0 state.
+        // Gate on hasBopData (this cycle's query), NOT on data.bop: when the feed is
+        // down, data.bop is the carried-forward copy of the last packet and must not
+        // be re-stamped as connected/good.
         const wc = data.wellcontrol;
         const bop = data.bop;
-        if (bop && Object.keys(bop).length > 0) {
+        if (hasBopData) {
+            const bopSampleMs = Object.entries(data._fieldTimes || {})
+                .filter(([key]) => key.startsWith('bop.'))
+                .reduce((max, [, t]) => Math.max(max, Date.parse(t) || 0), 0);
+            const bopFresh = bopSampleMs > 0 && (now - bopSampleMs) <= FRESH_MS;
             data.bop = {
                 annular_open: bop.annular_open ?? null,
                 annular_close: bop.annular_close ?? null,
@@ -614,8 +628,8 @@ const queryData = async () => {
                 air_pressure: bop.air_pressure ?? null,
                 source: 'versamax',
                 connected: true,
-                quality: 'good',
-                lastUpdate: new Date(now).toISOString()
+                quality: bopFresh ? 'good' : 'stale',
+                lastUpdate: bopSampleMs ? new Date(bopSampleMs).toISOString() : null
             };
             // Keep the existing Well Control contract so current screens and
             // consumers continue to work while BOP gets its own namespace.
@@ -674,32 +688,61 @@ const queryData = async () => {
         };
 
         // --- Workover layer: activity/NPT, torque-turn, alarms ---
-        if (hasRigSensorData) {
-            data._activity = workover.updateActivity(data, now);
-            const tt = workover.updateTorqueTurn(data, now);
-            if (tt.connectionMade) io.emit('connection_made', tt.connectionMade);
-            data._torqueturn = workover.getTorqueTurnLive();
-            const al = alarms.evaluate(data, now);
-            data._alarms = al.counts;
-            if (al.changed) io.emit('alarms', al);
-            maintenance.updateHours(data, now);
-            runlog.update(data, maintenance.getHours(), now);
-            data._efficiency = efficiency.update(data, now, { jointMade: !!tt.connectionMade });
-            // Store-and-forward: queue telemetry + events for sync to central
-            sync.enqueueTelemetry(data, now);
-            if (al.changed) sync.enqueueEvent('alarm', al.counts, now);
-            if (tt.connectionMade) sync.enqueueEvent('connection', tt.connectionMade, now);
-        } else {
-            data._activity = workover.getCurrent();
-            data._alarms = alarms.snapshot().counts;
-            data._efficiency = efficiency.compute(data);
+        // Isolated: an exception here (e.g. a bad alarm/efficiency config) must
+        // never stop the live packet from being emitted.
+        try {
+            if (hasRigSensorData) {
+                data._activity = workover.updateActivity(data, now);
+                const tt = workover.updateTorqueTurn(data, now);
+                if (tt.connectionMade) io.emit('connection_made', tt.connectionMade);
+                data._torqueturn = workover.getTorqueTurnLive();
+                const al = alarms.evaluate(data, now);
+                data._alarms = al.counts;
+                if (al.changed) io.emit('alarms', al);
+                maintenance.updateHours(data, now);
+                runlog.update(data, maintenance.getHours(), now);
+                data._efficiency = efficiency.update(data, now, { jointMade: !!tt.connectionMade });
+                // Store-and-forward: queue telemetry + events for sync to central
+                sync.enqueueTelemetry(data, now);
+                if (al.changed) sync.enqueueEvent('alarm', al.counts, now);
+                if (tt.connectionMade) sync.enqueueEvent('connection', tt.connectionMade, now);
+            } else {
+                data._activity = workover.getCurrent();
+                data._alarms = alarms.snapshot().counts;
+                data._efficiency = efficiency.compute(data);
+            }
+        } catch (err) {
+            console.error('Derived-data layer failed (live packet still sent):', err.message);
+            data._meta.derived_error = err.message;
         }
 
         latestRigData = data;
         io.emit('rig_data', data);
     } catch (err) {
-        console.error('Error querying InfluxDB:', err.message);
+        console.error('Live data cycle failed:', err.message);
+        emitStalePacket(err);
     }
+};
+
+// When a cycle fails (historian down/timeout, unexpected error), clients must be
+// told the feed is stale. Otherwise they keep showing the last packet as live.
+const emitStalePacket = (err) => {
+    const now = Date.now();
+    const data = JSON.parse(JSON.stringify(latestRigData || {}));
+    data.well_control = { available: false };
+    data.bop = { source: 'versamax', connected: false, quality: 'disconnected', lastUpdate: null };
+    data._meta = {
+        ...(data._meta || {}),
+        ts: new Date(now).toISOString(),
+        source: 'none',
+        stale: true,
+        bop_live: false,
+        connected: false,
+        age_ms: lastDataAt ? (now - lastDataAt) : null,
+        error: 'Live data unavailable: ' + (err && err.message ? err.message : 'unknown error'),
+    };
+    latestRigData = data;
+    io.emit('rig_data', data);
 };
 
 // Global cache for the latest data
@@ -995,6 +1038,17 @@ const loadUsers = () => {
 
 loadUsers();
 
+// Re-check every request/socket against the live user store (deactivation,
+// deletion and role changes take effect immediately, not at token expiry).
+auth.setUserResolver((claims) => users.find(u => String(u.id) === String(claims.sub)) || null);
+
+// Drop live telemetry sockets held by a user whose access was just revoked.
+const disconnectUserSockets = (id) => {
+    for (const socket of io.sockets.sockets.values()) {
+        if (String(socket.user?.sub) === String(id)) socket.disconnect(true);
+    }
+};
+
 const sanitizeUser = ({ password, ...u }) => u;
 const activeAdminCount = () => users.filter(u => u.role === 'admin' && u.status !== 'inactive').length;
 
@@ -1003,6 +1057,9 @@ const activeAdminCount = () => users.filter(u => u.role === 'admin' && u.status 
 // role locally (roleLocked) or deactivate the account to block sign-in.
 const upsertLdapUser = async (dir) => {
     let u = users.find(x => x.username.toLowerCase() === dir.username.toLowerCase());
+    // Never let a directory login take over (and re-role) a local account, e.g. the
+    // break-glass admin, just because the names match case-insensitively.
+    if (u && u.source !== 'ldap') return { conflict: true };
     if (u) {
         if (u.status === 'inactive') return null; // locally disabled -> blocked
         if (!u.roleLocked) u.role = dir.role;      // refresh role from directory groups
@@ -1067,6 +1124,7 @@ app.put('/api/users/:id', auth.requireAuth, auth.requireRole('admin'), async (re
     }
     if (status !== undefined) users[index].status = status;
     await saveUsers();
+    if (users[index].status === 'inactive') disconnectUserSockets(users[index].id);
     res.json({ success: true, user: sanitizeUser(users[index]) });
 });
 
@@ -1080,6 +1138,7 @@ app.delete('/api/users/:id', auth.requireAuth, auth.requireRole('admin'), async 
     }
     users = users.filter(u => u.id != id);
     await saveUsers();
+    disconnectUserSockets(target.id);
     res.json({ success: true });
 });
 
@@ -1806,6 +1865,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             const dir = await ldap.authenticate(username, password);
             const u = await upsertLdapUser(dir);
             if (!u) return res.status(403).json({ success: false, message: 'Account disabled' });
+            if (u.conflict) return res.status(409).json({ success: false, message: 'Domain account name conflicts with a local account; ask an administrator' });
             return res.json({ success: true, token: auth.signToken(u), user: sanitizeUser(u) });
         } catch (e) {
             return res.status(401).json({ success: false, message: 'Invalid domain credentials' });

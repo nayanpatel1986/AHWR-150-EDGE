@@ -233,7 +233,7 @@ Restart the backend afterwards so it back-fills `well_runs` from `wells.json`.
 ## Backups
 
 The telemetry is copied to the CMF; the operating records exist only here.
-`Backup-AHWR-EDGE-Records.ps1` dumps `app.*`, `wells`, `well_runs`, `rigs`,
+`Backup-AHWR-EDGE-Records.ps1` dumps `app.*`, `wells`, `wellbores`, `well_runs`, `rigs`,
 `tags` and `telemetry_imports` (`pg_dump -Fc`, as `ahwr_app`) to
 `backups\records-<time>.dump` and keeps 14 days. `Install-AHWR-EDGE-Services.ps1`
 schedules it daily (task "AHWR-EDGE records backup"). Copy `backups\` off the PC
@@ -244,7 +244,7 @@ memory), as `postgres`:
 
 ```
 Stop-Service AHWR-BOP-Collector, AHWR-Backend
-psql -h 127.0.0.1 -U postgres -d ahwr_edge -c "TRUNCATE app.documents, wells, well_runs, rigs, tags, telemetry_imports"
+psql -h 127.0.0.1 -U postgres -d ahwr_edge -c "TRUNCATE app.documents, wellbores, wells, well_runs, rigs, tags, telemetry_imports"
 pg_restore -h 127.0.0.1 -U postgres -d ahwr_edge --data-only --disable-triggers --exit-on-error backups\records-<time>.dump
 Start-Service AHWR-Backend, AHWR-BOP-Collector
 ```

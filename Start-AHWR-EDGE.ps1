@@ -34,8 +34,10 @@ foreach ($dir in @($RunDir, $DataDir, $LogDir, (Join-Path $DataDir 'app'))) {
 }
 
 function New-Secret {
+    # RandomNumberGenerator::Fill does not exist in Windows PowerShell 5.1 (.NET Framework).
     $bytes = New-Object byte[] 32
-    [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try { $rng.GetBytes($bytes) } finally { $rng.Dispose() }
     -join ($bytes | ForEach-Object { $_.ToString('x2') })
 }
 
@@ -154,7 +156,8 @@ function Stop-LegacyAhwrServicesIfNeeded {
     $legacy = @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue | Where-Object {
         $_.Name -in $legacyNames -and
         $_.State -eq 'Running' -and
-        ([string]$_.PathName).IndexOf($Root, [StringComparison]::OrdinalIgnoreCase) -lt 0
+        # Trailing backslash: C:\AHWR-EDGE is not part of an install in C:\AHWR.
+        ([string]$_.PathName).IndexOf($Root.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase) -lt 0
     })
     if (-not $legacy.Count) { return }
 

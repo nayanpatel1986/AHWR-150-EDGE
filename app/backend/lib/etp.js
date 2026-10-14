@@ -1,200 +1,313 @@
 'use strict';
-// ETP 2.0 publisher (Energistics Transfer Protocol) — pragmatic JSON-encoded subset.
-// Connects to an ETP server over WebSocket, performs the Session handshake
-// (RequestSession -> OpenSession), advertises channel metadata, then streams
-// ChannelData frames from the live rig payload. OUTBOUND ONLY (read-only publish).
+// ETP v1.2 producer (Energistics Transfer Protocol) — outbound, read-only publish.
 //
-// Scope note: this implements ETP 2.0's message envelope + ChannelStreaming flow with
-// the JSON encoding ("application/x-etp-message+json"). Full Avro binary encoding and
-// the complete protocol-capability set are the documented next step.
-const WebSocket = require('ws'); // present via socket.io's dependency tree
+// The edge connects as the ETP client (WebSocket subprotocol etp12.energistics.org,
+// binary Avro encoding with the official ETP v1.2 schemas in etp12/schemas.json)
+// and plays the PRODUCER role of ChannelStreaming (Protocol 1, the "simple
+// streamer"), asking the server to be the consumer. Per the specification:
+//   RequestSession -> OpenSession; the consumer sends StartStreaming; the producer
+//   then sends ChannelMetadata for every channel and streams ChannelData (each
+//   sample once, time index = UTC microseconds); new channels get ChannelMetadata
+//   before their first data; StopStreaming stops the data. Client message IDs are
+//   non-zero, even and increasing; every message carries the FIN bit (0x02).
+// Never writes to a PLC.
+const crypto = require('crypto');
+const WebSocket = require('ws');
+const avro = require('avsc');
 const { getRecent } = require('./sync');
 const { readJson, writeJson } = require('./persist');
+const transport = require('./transport');
+const witsml = require('./witsml');
+const units = require('./units');
+const bundle = require('./etp12/schemas.json');
 
-const ETP_SUBPROTOCOL = 'etp12.energistics.org';
+const SUBPROTOCOL = 'etp12.energistics.org';
+const VERSION = { major: 1, minor: 2, revision: 0, patch: 0 };
+const FIN = 0x02;
 const CONFIG_FILE = 'etp_config.json';
-// ETP message envelope protocols/messageTypes used here
-const P = { Core: 0, ChannelStreaming: 1 };
-const MT = { RequestSession: 1, OpenSession: 2, CloseSession: 5, ChannelMetadata: 1, ChannelData: 3 };
+const APP_VERSION = (() => { try { return require('../package.json').version; } catch { return '1.0'; } })();
 
-// Seed channels preserve the original IDs for compatibility; all other live
-// numeric tags are discovered from the shared sync ring and appended dynamically.
-const SEEDED_CHANNELS = [
-    { id: 1, mnem: 'HKLD', key: 'drawworks.hook_load', uom: 't' },
-    { id: 2, mnem: 'BPOS', key: 'drawworks.block_position', uom: 'ft' },
-    { id: 3, mnem: 'WOB', key: 'drilling.wob', uom: 't' },
-    { id: 4, mnem: 'SPPA', key: 'mudpump.pressure', uom: 'bar' },
-    { id: 5, mnem: 'TUBP', key: 'wellhead.tubing_pressure', uom: 'bar' },
-    { id: 6, mnem: 'CASP', key: 'wellhead.casing_pressure', uom: 'bar' },
-    { id: 7, mnem: 'DMEA', key: 'drilling.hole_depth', uom: 'm' },
-    { id: 8, mnem: 'CAT_ENGINE_RPM', key: 'cat_engine.rpm', uom: 'rpm' },
-    { id: 9, mnem: 'CAT_ENGINE_LOAD', key: 'cat_engine.load', uom: '%' },
-    { id: 10, mnem: 'CAT_ENGINE_OIL_PRESSURE', key: 'cat_engine.oil_pressure', uom: 'bar' },
-    { id: 11, mnem: 'CAT_ENGINE_PEDAL_POSITION', key: 'cat_engine.pedal_position', uom: '%' },
-];
-const channelByKey = new Map(SEEDED_CHANNELS.map((channel) => [channel.key, channel]));
-let nextChannelId = Math.max(...SEEDED_CHANNELS.map((channel) => channel.id)) + 1;
+// ---- Codec ------------------------------------------------------------------
+const types = new Map();   // "protocol:messageType" -> { name, type }
+let headerType = null;
+for (const m of bundle.messages) {
+    const type = avro.Type.forSchema(m.schema, { wrapUnions: true });
+    if (m.name === 'MessageHeader') headerType = type;
+    else types.set(`${m.protocol}:${m.messageType}`, { name: m.name, type });
+}
+const MSG = {
+    RequestSession: [0, 1], OpenSession: [0, 2], CloseSession: [0, 5], Ping: [0, 8], Pong: [0, 9],
+    ProtocolException: [0, 1000], Acknowledge: [0, 1001],
+    ChannelMetadata: [1, 1], ChannelData: [1, 2], StartStreaming: [1, 3], StopStreaming: [1, 4], TruncateChannels: [1, 5],
+};
 
+function encode(name, body, messageId, correlationId = 0, flags = FIN) {
+    const [protocol, messageType] = MSG[name];
+    const header = headerType.toBuffer({ protocol, messageType, correlationId, messageId, messageFlags: flags });
+    return Buffer.concat([header, types.get(`${protocol}:${messageType}`).type.toBuffer(body)]);
+}
+
+function decode(buf) {
+    const h = headerType.decode(buf, 0);
+    const header = h.value;
+    const t = types.get(`${header.protocol}:${header.messageType}`);
+    if (!t) return { header, name: null, body: null };
+    return { header, name: t.name, body: t.type.decode(buf, h.offset).value };
+}
+
+// Deterministic RFC 4122 (name-based, SHA-1) UUIDs: stable per device / channel.
+function uuidFrom(name) {
+    const b = crypto.createHash('sha1').update(`ahwr-edge:${name}`).digest().subarray(0, 16);
+    b[6] = (b[6] & 0x0f) | 0x50;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    return b;
+}
+const uuidString = (b) => {
+    const h = b.toString('hex');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
+const micros = (iso) => Date.parse(iso) * 1000;
+
+// ---- State -----------------------------------------------------------------
 const defaultConfig = {
-    enabled: process.env.ETP_ENABLED === 'true' || (process.env.ETP_URL ? true : false),
+    enabled: process.env.ETP_ENABLED === 'true',
     url: process.env.ETP_URL || '',
     deviceId: process.env.DEVICE_ID || 'AHWR-50-EDGE',
     token: process.env.DEVICE_TOKEN || '',
-    streamSeconds: Number(process.env.ETP_STREAM_SECONDS || 5),
+    streamSeconds: Number(process.env.ETP_STREAM_SECONDS || 1),
 };
 let config = { ...defaultConfig, ...readJson(CONFIG_FILE, {}) };
-let ws = null, io = null, sessionId = null, msgId = 1;
-let state = { connected: false, sessionEstablished: false, framesSent: 0, dataPointsSent: 0, lastSentAt: null, lastError: null };
-let streamTimer = null, reconnectTimer = null;
+let io = null;
+let describeMetric = () => ({});
+let ws = null;
+let messageId = 0;
+let sessionId = null;
+let streaming = false;
+let streamTimer = null;
+let reconnectTimer = null;
+let lastSentMs = 0;                // last snapshot time already streamed
+const channels = new Map();        // metric -> { id, uri, mnemonic, uom, label, announced }
+let state = { connected: false, sessionEstablished: false, framesSent: 0, dataPointsSent: 0, lastSentAt: null, lastError: null, serverApplication: null };
 
-const nextMsgId = () => msgId++;
+const nextId = () => { messageId += 2; return messageId; };   // client: even, increasing
 const emit = () => { if (io) try { io.emit('etp_status', getStatus()); } catch { /* ignore */ } };
 
-function tagMnemonic(key) {
-    return String(key || '')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .slice(0, 64) || `TAG_${nextChannelId}`;
-}
-
-function tagUnit(key) {
-    const lower = String(key || '').toLowerCase();
-    if (lower.includes('rpm')) return 'rpm';
-    if (lower.includes('torque')) return 'daN.m';
-    if (lower.includes('pressure') || lower.includes('press')) return 'bar';
-    if (lower.includes('temperature') || lower.includes('temp')) return 'degC';
-    if (lower.includes('depth')) return 'm';
-    if (lower.includes('position')) return lower.includes('block') ? 'mm' : 'm';
-    if (lower.includes('hook') || lower.includes('load') || lower.includes('wob')) return 't';
-    if (lower.includes('flow')) return lower.includes('percent') || lower.endsWith('.flow') || lower.includes('flow_out') ? '%' : 'L/min';
-    if (lower.includes('speed')) return 'mm/sec';
-    if (lower.includes('level') || lower.includes('percent') || lower.includes('_pct') || lower.includes('.pct')) return '%';
-    if (lower.includes('stroke')) return 'count';
-    return '';
-}
-
-function registerChannel(key) {
-    if (channelByKey.has(key)) return false;
-    channelByKey.set(key, { id: nextChannelId++, mnem: tagMnemonic(key), key, uom: tagUnit(key) });
+function send(name, body, correlationId = 0) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+    ws.send(encode(name, body, nextId(), correlationId));
     return true;
 }
 
-function channels() {
-    return Array.from(channelByKey.values()).sort((a, b) => a.id - b.id);
+function channelFor(metric) {
+    let c = channels.get(metric);
+    if (!c) {
+        const info = describeMetric(metric) || {};
+        c = {
+            id: channels.size + 1,     // smallest available integer, unique for the session
+            uri: `eml:///witsml21.Channel(${uuidString(uuidFrom(`${config.deviceId}:${metric}`))})`,
+            mnemonic: null,
+            uom: witsml.uomOf(units.presentation(metric)?.unit || info.unit),
+            label: info.label || metric,
+            announced: false,
+        };
+        channels.set(metric, c);
+        const names = witsml.mnemonicsFor([...channels.keys()]);
+        for (const [m, ch] of channels) ch.mnemonic = names.get(m);
+    }
+    return c;
 }
 
-function send(protocol, messageType, body) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const message = { header: { protocol, messageType, correlationId: 0, messageId: nextMsgId(), messageFlags: 0 }, body };
-    ws.send(JSON.stringify(message));
+function metadataRecord(metric, c, startMicros, endMicros) {
+    return {
+        uri: c.uri,
+        id: c.id,
+        indexes: [{
+            indexKind: 'DateTime',
+            interval: { startIndex: { item: { long: startMicros } }, endIndex: { item: { long: endMicros } }, uom: '', depthDatum: '' },
+            direction: 'Increasing',
+            name: 'TIME',
+            uom: '',
+            depthDatum: '',
+            indexPropertyKindUri: '',
+            filterable: true,
+        }],
+        channelName: c.mnemonic,
+        dataKind: 'typeDouble',
+        uom: c.uom,
+        depthDatum: '',
+        channelClassUri: '',
+        status: 'Active',
+        source: `AHWR-150 EDGE ${config.deviceId}: ${c.label} [${metric}]`.slice(0, 256),
+        axisVectorLengths: [],
+        attributeMetadata: [],
+        customData: {},
+    };
 }
 
-function requestSession() {
-    send(P.Core, MT.RequestSession, {
-        applicationName: 'AHWR-150 Edge Twin', applicationVersion: '1.0',
-        clientInstanceId: config.deviceId,
-        requestedProtocols: [{ protocol: P.ChannelStreaming, protocolVersion: { major: 1, minor: 1 }, role: 'producer' }],
-        supportedDataObjects: [], supportedFormats: ['application/x-etp-message+json'],
-    });
-}
-
-function publishMetadata() {
-    send(P.ChannelStreaming, MT.ChannelMetadata, {
-        channels: channels().map((c) => ({ channelId: c.id, channelName: c.mnem, uom: c.uom, dataType: 'double', indexes: [{ indexKind: 'time', uom: 's', direction: 'increasing' }] })),
-    });
-}
-
+// Announce channels not yet described, then stream every new snapshot once.
 function streamData() {
-    const snaps = getRecent(config.streamSeconds);
+    if (!streaming) return;
+    const snaps = getRecent(600).filter((s) => Date.parse(s.ts) > lastSentMs);
     if (!snaps.length) return;
-    const data = [];
-    let metadataChanged = false;
+    const pending = [];
     for (const s of snaps) {
-        for (const [key, raw] of Object.entries(s.values || {})) {
-            const v = Number(raw);
-            if (!Number.isFinite(v)) continue;
-            metadataChanged = registerChannel(key) || metadataChanged;
-            const c = channelByKey.get(key);
-            data.push({ channelId: c.id, indexes: [Date.parse(s.ts)], value: { item: v } });
+        for (const [metric, raw] of Object.entries(s.values || {})) {
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+            const c = channelFor(metric);
+            if (!c.announced) pending.push([metric, c]);
         }
     }
+    if (pending.length) {
+        const unique = [...new Map(pending).entries()];
+        const start = micros(snaps[0].ts);
+        const end = micros(snaps[snaps.length - 1].ts);
+        send('ChannelMetadata', { channels: unique.map(([m, c]) => metadataRecord(m, c, start, end)) });
+        unique.forEach(([, c]) => { c.announced = true; });
+    }
+    const data = [];
+    for (const s of snaps) {
+        const t = micros(s.ts);
+        for (const [metric, raw] of Object.entries(s.values || {})) {
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) continue;
+            data.push({ channelId: channelFor(metric).id, indexes: [{ item: { long: t } }], value: { item: { double: units.present(metric, raw) } }, valueAttributes: [] });
+        }
+    }
+    lastSentMs = Date.parse(snaps[snaps.length - 1].ts);
     if (!data.length) return;
-    if (metadataChanged && state.sessionEstablished) publishMetadata();
-    send(P.ChannelStreaming, MT.ChannelData, { data });
-    state.framesSent += 1; state.dataPointsSent += data.length; state.lastSentAt = new Date().toISOString();
+    if (send('ChannelData', { data })) {
+        state.framesSent += 1; state.dataPointsSent += data.length; state.lastSentAt = new Date().toISOString();
+        emit();
+    }
+}
+
+function startStreaming() {
+    streaming = true;
+    // Spec: on StartStreaming the producer MUST send ChannelMetadata first.
+    for (const c of channels.values()) c.announced = false;
+    lastSentMs = Date.now() - config.streamSeconds * 1000;   // begin from the "current" index
+    clearInterval(streamTimer);
+    streamTimer = setInterval(streamData, Math.max(1, config.streamSeconds) * 1000);
+    streamData();
     emit();
 }
 
-function onMessage(raw) {
-    let m; try { m = JSON.parse(raw.toString()); } catch { return; }
-    const { protocol, messageType } = m.header || {};
-    if (protocol === P.Core && messageType === MT.OpenSession) {
-        sessionId = (m.body && m.body.sessionId) || 'session';
-        state.sessionEstablished = true; state.lastError = null;
-        publishMetadata();
-        clearInterval(streamTimer);
-        streamTimer = setInterval(streamData, config.streamSeconds * 1000);
-        emit();
+function stopStreaming() {
+    streaming = false;
+    clearInterval(streamTimer);
+    streamTimer = null;
+    emit();
+}
+
+function onMessage(raw, isBinary) {
+    let msg;
+    try {
+        if (!isBinary) throw new Error('text frame received; only binary encoding is used');
+        msg = decode(Buffer.from(raw));
+    } catch (e) {
+        state.lastError = `undecodable message: ${e.message}`;
+        return emit();
     }
+    const { header, name, body } = msg;
+    switch (name) {
+        case 'OpenSession':
+            sessionId = uuidString(Buffer.from(body.sessionId));
+            state.sessionEstablished = true; state.lastError = null;
+            state.serverApplication = `${body.applicationName} ${body.applicationVersion}`;
+            if (!body.supportedProtocols.some((p) => p.protocol === 1)) {
+                state.lastError = 'server did not accept ChannelStreaming (Protocol 1) as consumer';
+            }
+            break;
+        case 'StartStreaming': startStreaming(); break;
+        case 'StopStreaming': stopStreaming(); break;
+        case 'Ping': send('Pong', { currentDateTime: Date.now() * 1000 }, header.messageId); break;
+        case 'CloseSession': disconnect(); scheduleReconnect(); break;
+        case 'ProtocolException': {
+            const e = body.error && (body.error['Energistics.Etp.v12.Datatypes.ErrorInfo'] || body.error);
+            state.lastError = `ProtocolException ${e && e.code}: ${e && e.message}`;
+            break;
+        }
+        default: break; // Acknowledge, Pong, others: nothing to do
+    }
+    emit();
 }
 
 function connect() {
     if (!config.enabled) return;
     clearTimeout(reconnectTimer);
-    if (!config.url) {
-        state.lastError = 'ETP URL not configured';
-        emit();
-        return;
-    }
+    if (!config.url) { state.lastError = 'ETP URL not configured'; emit(); return; }
+    const insecure = transport.insecureReason(config.url, transport.WS);
+    if (insecure) { state.lastError = `ETP URL refused: ${insecure}`; emit(); return; }
+    const headers = { 'etp-encoding': 'binary' };
+    if (config.token) headers.Authorization = `Bearer ${config.token}`;
+    let socket;
     try {
-        const headers = { 'X-Device-Id': config.deviceId };
-        if (config.token) headers['Authorization'] = `Bearer ${config.token}`;
-        ws = new WebSocket(config.url, ETP_SUBPROTOCOL, { headers, handshakeTimeout: 6000 });
+        socket = new WebSocket(config.url, SUBPROTOCOL, { headers, handshakeTimeout: 10000 });
     } catch (e) { state.lastError = e.message; scheduleReconnect(); return; }
-
-    const socket = ws;
-    socket.on('open', () => { state.connected = true; state.lastError = null; requestSession(); emit(); });
-    socket.on('message', onMessage);
+    ws = socket;
+    messageId = 0;
+    channels.clear();
+    socket.on('open', () => {
+        state.connected = true; state.lastError = null;
+        send('RequestSession', {
+            applicationName: 'AHWR-150 EDGE',
+            applicationVersion: APP_VERSION,
+            clientInstanceId: uuidFrom(`client:${config.deviceId}`),
+            requestedProtocols: [{ protocol: 1, protocolVersion: VERSION, role: 'consumer', protocolCapabilities: {} }],
+            supportedDataObjects: [{ qualifiedType: 'witsml21.Channel', dataObjectCapabilities: {} }],
+            supportedCompression: [],
+            supportedFormats: ['xml'],
+            currentDateTime: Date.now() * 1000,
+            earliestRetainedChangeTime: 0,
+            serverAuthorizationRequired: false,
+            endpointCapabilities: {},
+        });
+        emit();
+    });
+    socket.on('message', (data, isBinary) => { if (ws === socket) onMessage(data, isBinary); });
     socket.on('error', (e) => { state.lastError = e.message; });
     socket.on('close', () => {
         if (ws !== socket) return;
         state.connected = false; state.sessionEstablished = false; sessionId = null;
-        clearInterval(streamTimer); emit(); scheduleReconnect();
+        stopStreaming(); scheduleReconnect();
     });
 }
-function scheduleReconnect() { if (config.enabled) { clearTimeout(reconnectTimer); reconnectTimer = setTimeout(connect, 8000); } }
+
+function scheduleReconnect() {
+    if (!config.enabled) return;
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, 8000);
+}
 
 function disconnect() {
     clearTimeout(reconnectTimer);
-    clearInterval(streamTimer);
-    streamTimer = null;
-    state.connected = false;
-    state.sessionEstablished = false;
-    sessionId = null;
-    if (ws) {
-        const old = ws;
-        ws = null;
-        try { old.close(); } catch { /* ignore */ }
+    stopStreaming();
+    const old = ws;
+    ws = null;
+    if (old) {
+        try { if (old.readyState === WebSocket.OPEN) old.send(encode('CloseSession', { reason: 'edge closing session' }, nextId())); } catch { /* ignore */ }
+        try { old.close(1000); } catch { /* ignore */ }
     }
+    state.connected = false; state.sessionEstablished = false; sessionId = null;
 }
 
 function getStatus() {
     return {
-        enabled: config.enabled, url: config.url, subprotocol: ETP_SUBPROTOCOL, encoding: 'application/x-etp-message+json',
-        deviceId: config.deviceId, tokenSet: !!config.token,
-        connected: state.connected, sessionEstablished: state.sessionEstablished, sessionId,
-        channels: channelByKey.size, framesSent: state.framesSent, dataPointsSent: state.dataPointsSent,
+        protocol: 'ETP v1.2', subprotocol: SUBPROTOCOL, encoding: 'binary', role: 'producer (ChannelStreaming)',
+        enabled: config.enabled, url: config.url, deviceId: config.deviceId, tokenSet: !!config.token,
+        connected: state.connected, sessionEstablished: state.sessionEstablished, sessionId, streaming,
+        serverApplication: state.serverApplication,
+        channels: channels.size, framesSent: state.framesSent, dataPointsSent: state.dataPointsSent,
         lastSentAt: state.lastSentAt, lastError: state.lastError, streamSeconds: config.streamSeconds,
     };
 }
 
 async function setConfig(next) {
+    if ('url' in next && next.url) transport.assertSecure(next.url, transport.WS, 'ETP URL');
     if ('enabled' in next) config.enabled = !!next.enabled;
     if ('url' in next) config.url = String(next.url || '').trim();
     if ('deviceId' in next) config.deviceId = String(next.deviceId || '').trim() || defaultConfig.deviceId;
     if ('token' in next) config.token = String(next.token || '');
-    if ('streamSeconds' in next) config.streamSeconds = Math.max(1, Number(next.streamSeconds) || 5);
+    if ('streamSeconds' in next) config.streamSeconds = Math.max(1, Number(next.streamSeconds) || 1);
     await writeJson(CONFIG_FILE, config);
     disconnect();
     if (config.enabled) connect();
@@ -202,6 +315,11 @@ async function setConfig(next) {
     return getStatus();
 }
 
-function start(ioRef) { io = ioRef; if (config.enabled) connect(); }
+/** @param ioRef socket.io server; opts.describeMetric(metric) -> { label, unit } */
+function start(ioRef, opts = {}) {
+    io = ioRef;
+    if (typeof opts.describeMetric === 'function') describeMetric = opts.describeMetric;
+    if (config.enabled) connect();
+}
 
-module.exports = { start, getStatus, setConfig };
+module.exports = { start, getStatus, setConfig, disconnect, _codec: { encode, decode, MSG, uuidFrom, uuidString } };

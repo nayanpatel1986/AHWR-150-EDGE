@@ -26,6 +26,19 @@ const signToken = (user) => jwt.sign(
 );
 const verifyToken = (token) => jwt.verify(token, JWT_SECRET);
 
+// A signed token alone is not enough: the account may have been deactivated,
+// deleted or had its role changed since the token was issued. The server
+// registers a resolver that returns the CURRENT user record (or null).
+let resolveUser = null;
+const setUserResolver = (fn) => { resolveUser = fn; };
+const authenticateToken = (token) => {
+    const claims = verifyToken(token);
+    if (!resolveUser) return claims;
+    const user = resolveUser(claims);
+    if (!user || user.status === 'inactive') throw new Error('Account is no longer active');
+    return { ...claims, username: user.username, role: user.role };
+};
+
 const extractBearer = (header) => {
     if (typeof header !== 'string') return null;
     if (!header.startsWith('Bearer ')) return null;
@@ -38,7 +51,7 @@ const requireAuth = (req, res, next) => {
     const token = extractBearer(req.headers['authorization']);
     if (!token) return res.status(401).json({ error: 'Authentication required' });
     try {
-        req.user = verifyToken(token);
+        req.user = authenticateToken(token);
         return next();
     } catch (e) {
         return res.status(401).json({ error: 'Invalid or expired token' });
@@ -60,7 +73,7 @@ const socketAuth = (socket, next) => {
         extractBearer(socket.handshake.headers['authorization']);
     if (!token) return next(new Error('Authentication required'));
     try {
-        socket.user = verifyToken(token);
+        socket.user = authenticateToken(token);
         return next();
     } catch (e) {
         return next(new Error('Invalid or expired token'));
@@ -69,7 +82,7 @@ const socketAuth = (socket, next) => {
 
 module.exports = {
     hashPassword, verifyPassword, isHashed,
-    signToken, verifyToken,
+    signToken, verifyToken, setUserResolver,
     requireAuth, requireRole, socketAuth,
     JWT_EXPIRES,
 };

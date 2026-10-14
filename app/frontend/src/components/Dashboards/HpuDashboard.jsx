@@ -93,7 +93,7 @@ export default function HpuDashboard() {
  const fetchHistory=async()=>{if(busy)return;busy=true;try{const batches=[];for(let i=0;i<historyKeys.length;i+=60)batches.push(historyKeys.slice(i,i+60));
  const responses=await Promise.all(batches.map(keys=>api.get('/api/history',{params:{range:'-'+range,metrics:keys.map(k=>'hpu.'+k).join(',')},signal:controller.signal})));
  const merged=new Map();responses.forEach(r=>r.data.forEach(row=>merged.set(row.timestamp,{...merged.get(row.timestamp),...row})));
- if(active){setHistory([...merged.values()].sort((a,b)=>a.timestamp-b.timestamp));setError('')}}catch(e){if(active&&!controller.signal.aborted){setHistory([]);setError('History unavailable — check InfluxDB connection')}}finally{busy=false}};
+ if(active){setHistory([...merged.values()].sort((a,b)=>a.timestamp-b.timestamp));setError('')}}catch(e){if(active&&!controller.signal.aborted){setHistory([]);setError('History unavailable — check the historian (TimescaleDB) connection')}}finally{busy=false}};
  setHistory([]);fetchHistory();const timer=setInterval(fetchHistory,15000);return()=>{active=false;controller.abort();clearInterval(timer)}},[range,historyKeys]);
  const rows=useMemo(()=>history.map(row=>{const out={timestamp:row.timestamp};for(const key of historyKeys){let v=number(row['hpu.'+key]);const q=qualityFields[key];if(q&&bit(row['hpu.'+q])!==true)v=null;const bounds=config.ranges?.[key];if(bounds&&v!==null&&((number(bounds.min)!==null&&v<bounds.min)||(number(bounds.max)!==null&&v>bounds.max)))v=null;out[key]=v;}
  for(const g of groups){const a=aggregateGroup(out,g,config.ratedFlows);out[g.id+'_flow']=a.flow;out[g.id+'_flow_sp']=a.flowSp;out[g.id+'_pressure']=a.pressure;}return out}),[history,historyKeys,config]);

@@ -285,7 +285,7 @@ export default function EdgeSyncPage() {
         }
     };
 
-    // ---- ETP 2.0 publisher (admin) ----
+    // ---- ETP v1.2 publisher (admin) ----
     const setEtpConfig = async (body, successMsg) => {
         if (!isAdmin) return;
         setEtpSaving(true);
@@ -511,12 +511,12 @@ export default function EdgeSyncPage() {
                 )}
             </Paper>
 
-            {/* ---- ETP 2.0 publisher panel ---- */}
+            {/* ---- ETP v1.2 publisher panel ---- */}
             <Paper sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 1 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Radio size={18} /> ETP 2.0 Publisher
+                            <Radio size={18} /> ETP v1.2 Publisher
                         </Typography>
                         <EtpStateChip status={etp} />
                     </Box>
@@ -548,7 +548,7 @@ export default function EdgeSyncPage() {
                 </Box>
 
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
-                    ETP 2.0 (Energistics) outbound channel streaming — JSON-encoded subset; read-only publish to the central CRMF.
+                    ETP v1.2 (Energistics) ChannelStreaming producer — binary Avro, official v1.2 schemas; read-only publish to the central CRMF over wss://.
                 </Typography>
 
                 {etp?.lastError && (
@@ -660,9 +660,9 @@ export default function EdgeSyncPage() {
                 </DialogActions>
             </Dialog>
 
-            {/* ---- ETP 2.0 config dialog (admin) ---- */}
+            {/* ---- ETP v1.2 config dialog (admin) ---- */}
             <Dialog open={etpCfgOpen} onClose={() => setEtpCfgOpen(false)} PaperProps={{ sx: { bgcolor: 'background.paper', color: 'text.primary', minWidth: 520 } }}>
-                <DialogTitle>ETP 2.0 Publisher Configuration</DialogTitle>
+                <DialogTitle>ETP v1.2 Publisher Configuration</DialogTitle>
                 <DialogContent>
                     {etpCfgDraft && (
                         <Grid container spacing={2} sx={{ mt: 0.5 }}>

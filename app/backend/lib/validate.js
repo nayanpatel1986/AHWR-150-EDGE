@@ -70,6 +70,7 @@ function validatePlcConfig(config) {
         toInt(slave.port, 'device.port', { min: 1, max: 65535, def: protocol === 's7comm' ? 102 : 502 });
 
         if (protocol === 'modbus') {
+            toInt(slave.slaveId, 'device.slaveId', { min: 0, max: 255, def: 1 });
             const regs = Array.isArray(slave.registers) ? slave.registers : [];
             if (regs.length > 512) throw new ValidationError('Too many registers (max 512)');
             for (const r of regs) {

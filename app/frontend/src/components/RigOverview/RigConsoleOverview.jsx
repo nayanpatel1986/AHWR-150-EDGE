@@ -186,7 +186,7 @@ const TREND_DEFS = [
     { id: 'genCoolant', label: 'CAT COOLANT', unit: 'degC', color: '#38bdf8', d: 0, metric: 'cat_engine.coolant_temp', get: (r) => num(r.cat_engine?.coolant_temp) },
     { id: 'genOilPress', label: 'CAT OIL PRESS', unit: 'bar', color: '#eab308', d: 1, metric: 'cat_engine.oil_pressure', get: (r) => num(r.cat_engine?.oil_pressure) },
     { id: 'genStatus', label: 'CAT STATUS', unit: 'code', color: '#f59e0b', d: 0, metric: 'cat_engine.status', get: (r) => num(r.cat_engine?.status) },
-    { id: 'circPress', label: 'CIRC PRESS', unit: 'bar', color: '#84cc16', d: 1, metric: 'mudpump.pressure', get: (r) => num(r.mudpump?.pressure) },
+    { id: 'circPress', label: 'CIRC PRESS', unit: 'psi', color: '#84cc16', d: 0, metric: 'mudpump.pressure', scale: BAR_TO_PSI, get: (r) => num(r.mudpump?.pressure) * BAR_TO_PSI },
     { id: 'spm', label: 'SPM', unit: 'spm', color: '#22c55e', d: 1, metric: 'mudpump.spm', get: (r) => num(r.mudpump?.spm) },
     { id: 'flowIn', label: 'FLOW IN', unit: 'L/min', color: '#8b5cf6', d: 0, metric: 'mudpump.flow_in', get: (r) => num(r.mudpump?.flow_in) },
     { id: 'flowOut', label: 'FLOW OUT', unit: '%', color: '#10b981', d: 1, metric: 'fluid.flow_out', get: (r) => num(r.fluid?.flow_out) },
@@ -360,7 +360,7 @@ export default function RigConsoleOverview() {
                     const t = Number(row.timestamp);
                     if (!Number.isFinite(t)) return;
                     selectedTrendDefs.forEach((d) => {
-                        const v = Number(row[d.metric]);
+                        const v = Number(row[d.metric]) * (d.scale || 1);
                         if (row[d.metric] != null && Number.isFinite(v)) seeded[d.id].push({ t, v });
                     });
                 });

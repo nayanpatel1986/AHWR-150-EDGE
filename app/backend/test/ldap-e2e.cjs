@@ -58,12 +58,17 @@ Object.assign(process.env, {
     LDAP_ROLE_OPERATOR: 'RigOperators',
     LDAP_DEFAULT_ROLE: 'viewer',
     JWT_SECRET: 'testsecret_testsecret_1234567890',
-    INFLUX_TOKEN: 'dummy',
+    PGHOST: '127.0.0.1',
+    PGPORT: '1',            // no database: the historian retries in the background
+    PGPASSWORD: 'dummy',
+    PG_CONNECT_TIMEOUT_MS: '200',
     DATA_DIR,
+    PERSIST_BACKEND: 'file',
+    TELEGRAF_CONFIG_PATH: path.join(DATA_DIR, 'plc.conf'),
     ADMIN_USERNAME: 'admin',
     ADMIN_PASSWORD: 'LocalAdminPass1',
     PORT: '5097',
-    POLL_INTERVAL_MS: '999999', // effectively pause Influx polling during the test
+    POLL_INTERVAL_MS: '999999', // effectively pause historian polling during the test
 });
 
 require('../server.js');

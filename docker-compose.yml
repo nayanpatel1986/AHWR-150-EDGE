@@ -1,0 +1,79 @@
+# AHWR-150 EDGE — Docker stack (TimescaleDB edition), for development, testing
+# and Docker-based rigs. The native Windows build uses Start-AHWR-EDGE.ps1.
+#
+# Create .env next to this file first (never commit it):
+#   DEVICE_ID=AHWR-50-III
+#   POSTGRES_PASSWORD=<postgres superuser password>
+#   APP_DB_PASSWORD=<ahwr_app password>
+#   TELEGRAF_DB_PASSWORD=<telegraf_writer password>
+#   JWT_SECRET=<32+ random characters>
+#   ADMIN_PASSWORD=<initial admin password, first start only>
+# then:  docker compose up -d --build     ->  http://127.0.0.1:8080
+#
+# Telegraf polls the PLC configured in Settings > Administration > S7 PLC
+# (read-only). All ports are published on 127.0.0.1 only.
+name: ahwr-edge
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.28.3-pg15        # same TimescaleDB as the CMF
+    command: ["postgres", "-c", "timescaledb.telemetry_level=off"]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+      TELEGRAF_DB_PASSWORD: ${TELEGRAF_DB_PASSWORD:?set TELEGRAF_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./app/sql:/ahwr-sql:ro
+      - ./app/sql/docker-init.sh:/docker-entrypoint-initdb.d/10-ahwr.sh:ro
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "ahwr_edge"]
+      interval: 5s
+      retries: 30
+    restart: unless-stopped
+
+  backend:
+    build: { context: ./app, dockerfile: backend/Dockerfile }
+    environment:
+      PORT: "5000"
+      DEVICE_ID: ${DEVICE_ID:?set DEVICE_ID in .env}
+      PGHOST: timescaledb
+      PGDATABASE: ahwr_edge
+      PGUSER: ahwr_app
+      PGPASSWORD: ${APP_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      TELEGRAF_CONFIG_PATH: /etc/telegraf/telegraf.d/plc.conf
+    volumes:
+      - appdata:/data
+      - telegraf-d:/etc/telegraf/telegraf.d
+    depends_on: { timescaledb: { condition: service_healthy } }
+    restart: unless-stopped
+
+  telegraf:
+    image: telegraf:1.29.5
+    command: ["telegraf", "--config", "/etc/telegraf/telegraf.conf", "--config", "/etc/telegraf/health.conf",
+              "--config-directory", "/etc/telegraf/telegraf.d", "--watch-config", "poll"]
+    environment:
+      PGHOST: timescaledb
+      TELEGRAF_DB_PASSWORD: ${TELEGRAF_DB_PASSWORD}
+      TELEGRAF_LISTENER_ADDRESS: "0.0.0.0:8186"
+    volumes:
+      - ./app/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./app/telegraf/telegraf.d/health.conf:/etc/telegraf/health.conf:ro
+      - telegraf-d:/etc/telegraf/telegraf.d
+    # The backend writes telegraf.d/plc.conf on start; Telegraf must load it.
+    depends_on: { backend: { condition: service_healthy } }
+    restart: unless-stopped
+
+  frontend:
+    build: { context: ./app, dockerfile: frontend/Dockerfile }
+    depends_on: [backend]
+    ports: ["127.0.0.1:8080:80"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  appdata:
+  telegraf-d:

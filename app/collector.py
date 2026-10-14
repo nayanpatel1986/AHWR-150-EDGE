@@ -2,12 +2,11 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timezone
+import time
+import urllib.request
 from pathlib import Path
 
 from asyncua import Client, ua
-from influxdb_client import InfluxDBClient, Point
-from influxdb_client.client.write_api import SYNCHRONOUS
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -23,10 +22,10 @@ SECURITY_MODE = os.getenv("KEPWARE_SECURITY_MODE", "")
 CERT_PATH = os.getenv("KEPWARE_CERT_PATH", "")
 PRIVATE_KEY_PATH = os.getenv("KEPWARE_PRIVATE_KEY_PATH", "")
 CONFIG_PATH = Path(os.getenv("BOP_CONFIG_PATH", "/config/bop_config.json"))
-INFLUX_URL = os.getenv("INFLUX_URL", "http://influxdb:8086")
-INFLUX_TOKEN = os.environ["INFLUX_TOKEN"]
-INFLUX_ORG = os.getenv("INFLUX_ORG", "romii_org")
-INFLUX_BUCKET = os.getenv("INFLUX_BUCKET", "romii_bucket")
+# Readings go to Telegraf's loopback listener (inputs.influxdb_v2_listener),
+# which maps them to CMF telemetry rows (bop.<field>) like the PLC data. The
+# collector holds no database credentials.
+TELEGRAF_LISTENER_URL = os.getenv("TELEGRAF_LISTENER_URL", "http://127.0.0.1:8186").rstrip("/")
 RECONNECT_INITIAL = float(os.getenv("BOP_RECONNECT_INITIAL_SECONDS", "2"))
 RECONNECT_MAX = float(os.getenv("BOP_RECONNECT_MAX_SECONDS", "60"))
 
@@ -38,6 +37,33 @@ def load_config():
         log.warning("BOP configuration unavailable: %s", exc)
         return {"enabled": False, "tags": []}
     return config
+
+
+def _escape_key(value):
+    return str(value).replace("\\", "\\\\").replace(",", "\\,").replace("=", "\\=").replace(" ", "\\ ")
+
+
+def line_protocol(fields, timestamp_ns):
+    """One 'bop' line: booleans as true/false, numbers as floats."""
+    parts = []
+    for key, value in fields.items():
+        if isinstance(value, bool):
+            parts.append(f"{_escape_key(key)}={'true' if value else 'false'}")
+        else:
+            parts.append(f"{_escape_key(key)}={float(value)!r}")
+    return f"bop,source=versamax,quality=good {','.join(parts)} {timestamp_ns}"
+
+
+def write_line(line):
+    req = urllib.request.Request(
+        f"{TELEGRAF_LISTENER_URL}/api/v2/write?bucket=ahwr&org=ahwr&precision=ns",
+        data=line.encode("utf-8"),
+        headers={"Content-Type": "text/plain; charset=utf-8"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        if resp.status >= 300:
+            raise RuntimeError(f"Telegraf listener returned HTTP {resp.status}")
 
 
 def configured_tags(config):
@@ -67,7 +93,7 @@ async def make_client(config):
     return client
 
 
-async def collect_once(write_api):
+async def collect_once():
     config = load_config()
     if not config.get("enabled", True):
         log.info("VersaMax BOP collector disabled in administration settings")
@@ -83,9 +109,8 @@ async def collect_once(write_api):
             log.warning("OPC UA connected, but no BOP Node IDs configured; enter confirmed Kepware Node IDs in Settings > Administration")
             return True
         nodes = [(tag, client.get_node(tag["nodeId"])) for tag in tags]
-        point = Point("bop").tag("source", "versamax").tag("quality", "good")
-        timestamp = datetime.now(timezone.utc)
-        good_values = 0
+        fields = {}
+        timestamp_ns = time.time_ns()
         for tag, node in nodes:
             try:
                 value = await node.read_value()
@@ -95,15 +120,14 @@ async def collect_once(write_api):
                     log.warning("VersaMax tag quality %s: %s", quality, tag["name"])
                     continue
                 if isinstance(value, (bool, int, float)):
-                    point = point.field(tag["field"], value)
-                    good_values += 1
+                    fields[tag["field"]] = value
                 else:
                     log.warning("VersaMax tag is not numeric/bool: %s", tag["name"])
             except Exception as exc:
                 log.warning("VersaMax tag read failed: %s (%s)", tag["name"], exc)
-        if good_values:
-            write_api.write(bucket=INFLUX_BUCKET, org=INFLUX_ORG, record=point.time(timestamp))
-            log.info("VersaMax data written to InfluxDB (%d tags)", good_values)
+        if fields:
+            await asyncio.to_thread(write_line, line_protocol(fields, timestamp_ns))
+            log.debug("VersaMax data sent to Telegraf (%d tags)", len(fields))
         else:
             log.warning("VersaMax connected but no good BOP tag values were read")
         return True
@@ -116,19 +140,17 @@ async def collect_once(write_api):
 
 async def main():
     backoff = RECONNECT_INITIAL
-    with InfluxDBClient(url=INFLUX_URL, token=INFLUX_TOKEN, org=INFLUX_ORG) as influx:
-        write_api = influx.write_api(write_options=SYNCHRONOUS)
-        while True:
-            try:
-                connected = await collect_once(write_api)
-                backoff = RECONNECT_INITIAL if connected else min(backoff * 2, RECONNECT_MAX)
-            except Exception as exc:
-                log.error("VersaMax OPC UA disconnected: %s", exc)
-                log.info("VersaMax reconnecting in %.1f seconds...", backoff)
-                await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, RECONNECT_MAX)
-            else:
-                await asyncio.sleep(1)
+    while True:
+        try:
+            connected = await collect_once()
+            backoff = RECONNECT_INITIAL if connected else min(backoff * 2, RECONNECT_MAX)
+        except Exception as exc:
+            log.error("VersaMax OPC UA disconnected: %s", exc)
+            log.info("VersaMax reconnecting in %.1f seconds...", backoff)
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, RECONNECT_MAX)
+        else:
+            await asyncio.sleep(1)
 
 
 if __name__ == "__main__":

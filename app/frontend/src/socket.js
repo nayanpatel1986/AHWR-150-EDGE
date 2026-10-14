@@ -24,7 +24,40 @@ export function isLiveRigPayload(payload) {
     return meta.connected === true && meta.source !== 'none' && meta.stale !== true;
 }
 
+// Client-side watchdog. The server normally marks stale packets itself, but if
+// it stops emitting altogether while the socket stays connected (hung loop,
+// blocked event loop), screens would keep showing the last packet as live.
+// After RIG_DATA_TIMEOUT_MS of silence, replay the last packet marked stale to
+// every rig_data listener so all pages switch to their no-live-data state.
+const RIG_DATA_TIMEOUT_MS = 6000;
+let lastRigDataAt = 0;
+let watchdogFired = false;
+
+setInterval(() => {
+    if (!socket.connected || !lastRigDataAt || watchdogFired) return;
+    if (Date.now() - lastRigDataAt < RIG_DATA_TIMEOUT_MS) return;
+    watchdogFired = true;
+    const stalePayload = {
+        ...(latestRigData || {}),
+        _meta: {
+            ...(latestRigData?._meta || {}),
+            stale: true,
+            connected: false,
+            source: 'none',
+            watchdog: true,
+            error: `No data from server for ${Math.round((Date.now() - lastRigDataAt) / 1000)} s`,
+        },
+    };
+    socket.listeners('rig_data').forEach((listener) => {
+        try { listener(stalePayload); } catch (err) { console.error('rig_data watchdog listener failed:', err); }
+    });
+}, 1000);
+
 socket.on('rig_data', (payload) => {
+    if (!payload?._meta?.watchdog) {
+        lastRigDataAt = Date.now();
+        watchdogFired = false;
+    }
     if (payload && Object.keys(payload).length) {
         latestRigData = payload;
         if (!isLiveRigPayload(payload)) return;

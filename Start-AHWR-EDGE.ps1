@@ -1,4 +1,11 @@
 $ErrorActionPreference = 'Stop'
+# AHWR-150 EDGE launcher — TimescaleDB edition.
+#
+# PostgreSQL + TimescaleDB runs in one of two modes (PG_MODE in settings.env):
+#   bundled  runtime\pgsql is initialised in data\pgdata and started/stopped by
+#            these scripts (portable folder, the default when runtime\pgsql exists)
+#   service  an installed PostgreSQL 15/16 Windows service with TimescaleDB, as in
+#            the Edge Installation Guide; this script only connects to it
 $Root = $PSScriptRoot
 $RunDir = Join-Path $Root 'run'
 $DataDir = Join-Path $Root 'data'
@@ -6,66 +13,76 @@ $LogDir = Join-Path $Root 'logs'
 $SettingsFile = Join-Path $Root 'settings.env'
 $Node = Join-Path $Root 'runtime\node\node.exe'
 $Python = Join-Path $Root 'runtime\python\python.exe'
-$Influxd = Join-Path $Root 'runtime\influx\influxd.exe'
-$InfluxCli = Join-Path $Root 'runtime\influx\influx.exe'
 $Telegraf = Join-Path $Root 'runtime\telegraf\telegraf.exe'
+$PgBin = Join-Path $Root 'runtime\pgsql\bin'
 $Backend = Join-Path $Root 'app\backend\server.js'
 $Collector = Join-Path $Root 'app\collector.py'
+$SqlDir = Join-Path $Root 'app\sql'
+$PgData = Join-Path $DataDir 'pgdata'
+$RigIdPattern = '^[A-Za-z0-9_.\-]{1,64}$'
 
-foreach ($path in @($Node, $Python, $Influxd, $InfluxCli, $Telegraf, $Backend, $Collector)) {
-    if (-not (Test-Path -LiteralPath $path)) { throw "Missing runtime/application file: $path`nRun Build-AHWR-EDGE.ps1 before starting." }
+foreach ($path in @($Node, $Python, $Telegraf, $Backend, $Collector, (Join-Path $SqlDir '01-roles.sql'), (Join-Path $SqlDir '02-schema.sql'))) {
+    if (-not (Test-Path -LiteralPath $path)) { throw "Missing runtime/application file: $path`nInstall the matching runtime folder before starting." }
 }
-foreach ($dir in @($RunDir, $DataDir, $LogDir, (Join-Path $DataDir 'app'), (Join-Path $DataDir 'influx'))) {
+foreach ($dir in @($RunDir, $DataDir, $LogDir, (Join-Path $DataDir 'app'))) {
     $null = New-Item -ItemType Directory -Force -Path $dir
 }
 
+function New-Secret {
+    $bytes = New-Object byte[] 32
+    [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    -join ($bytes | ForEach-Object { $_.ToString('x2') })
+}
+
+function Read-SecretText([string]$Prompt) {
+    $secure = Read-Host $Prompt -AsSecureString
+    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+}
+
+function Read-RigId {
+    while ($true) {
+        $value = Read-Host 'Rig device id (DEVICE_ID, exactly as registered at the CMF)'
+        if ($value -match $RigIdPattern) { return $value }
+        Write-Host 'Use 1-64 letters, digits, dot, underscore or hyphen.' -ForegroundColor Yellow
+    }
+}
+
+function Get-SettingKeys {
+    if (-not (Test-Path -LiteralPath $SettingsFile)) { return @() }
+    Get-Content -LiteralPath $SettingsFile | ForEach-Object {
+        $line = $_.TrimStart([char]0xFEFF)
+        if ($line -match '^\s*([^#=]+)=') { $matches[1].Trim() }
+    }
+}
+
+# --- First run, or upgrade of an InfluxDB-edition settings.env -----------------
 if (-not (Test-Path -LiteralPath $SettingsFile)) {
     Write-Host 'First-time setup: choose credentials for this computer.' -ForegroundColor Cyan
     $admin = Read-Host 'Local AHWR admin username'
     if ([string]::IsNullOrWhiteSpace($admin)) { $admin = 'admin' }
-    $securePassword = Read-Host 'Local AHWR admin password (minimum 8 characters)' -AsSecureString
-    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
-    try { $adminPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
-    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
+    $adminPassword = Read-SecretText 'Local AHWR admin password (minimum 8 characters)'
     if ($adminPassword.Length -lt 8) { throw 'Admin password must be at least 8 characters.' }
     $opcUrl = Read-Host 'KEPServerEX endpoint [opc.tcp://localhost:49320]'
     if ([string]::IsNullOrWhiteSpace($opcUrl)) { $opcUrl = 'opc.tcp://localhost:49320' }
     $opcUser = Read-Host 'KEPServerEX OPC UA username (leave blank if anonymous)'
     $opcPassword = ''
-    if (-not [string]::IsNullOrWhiteSpace($opcUser)) {
-        $opcSecure = Read-Host 'KEPServerEX OPC UA password' -AsSecureString
-        $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($opcSecure)
-        try { $opcPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
-        finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
-    }
-    $bytes = New-Object byte[] 48
-    [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-    $token = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+','A').Replace('/','B')
-    $jwtBytes = New-Object byte[] 48
-    [Security.Cryptography.RandomNumberGenerator]::Fill($jwtBytes)
-    $jwt = [Convert]::ToBase64String($jwtBytes).TrimEnd('=').Replace('+','C').Replace('/','D')
+    if (-not [string]::IsNullOrWhiteSpace($opcUser)) { $opcPassword = Read-SecretText 'KEPServerEX OPC UA password' }
     $settings = @(
         "ADMIN_USERNAME=$admin",
         "ADMIN_PASSWORD=$adminPassword",
-        "JWT_SECRET=$jwt",
-        "INFLUX_TOKEN=$token",
-        'INFLUX_ORG=romii_org',
-        'INFLUX_BUCKET=romii_bucket',
-        'INFLUX_URL=http://127.0.0.1:8086',
+        "JWT_SECRET=$(New-Secret)",
         'PORT=8080',
-        "DATA_DIR=$DataDir\app",
-        "FRONTEND_DIST_DIR=$Root\app\frontend\dist",
-        "TELEGRAF_CONFIG_PATH=$Root\app\telegraf\telegraf.conf",
         'DATA_SOURCE=plc',
+        'AUTH_MODE=local',
         "KEPWARE_OPCUA_URL=$opcUrl",
         "KEPWARE_OPCUA_USERNAME=$opcUser",
         "KEPWARE_OPCUA_PASSWORD=$opcPassword",
         'KEPWARE_SECURITY_MODE=None',
         'KEPWARE_SECURITY_POLICY=None',
-        "BOP_CONFIG_PATH=$DataDir\app\bop_config.json",
         'BOP_RECONNECT_INITIAL_SECONDS=2',
         'BOP_RECONNECT_MAX_SECONDS=60',
-        'AUTH_MODE=local',
         'SYNC_ENABLED=false',
         'ETP_ENABLED=false'
     )
@@ -73,23 +90,42 @@ if (-not (Test-Path -LiteralPath $SettingsFile)) {
     Write-Host 'Created settings.env. It contains local service credentials; do not share it.' -ForegroundColor Yellow
 }
 
+$existingKeys = @(Get-SettingKeys)
+$additions = @()
+if ($existingKeys -notcontains 'DEVICE_ID') { $additions += "DEVICE_ID=$(Read-RigId)" }
+if ($existingKeys -notcontains 'PG_MODE') { $additions += "PG_MODE=$(if (Test-Path -LiteralPath (Join-Path $PgBin 'pg_ctl.exe')) { 'bundled' } else { 'service' })" }
+if ($existingKeys -notcontains 'PGHOST') { $additions += 'PGHOST=127.0.0.1' }
+if ($existingKeys -notcontains 'PGPORT') { $additions += 'PGPORT=5432' }
+if ($existingKeys -notcontains 'PGDATABASE') { $additions += 'PGDATABASE=ahwr_edge' }
+if ($existingKeys -notcontains 'PGUSER') { $additions += 'PGUSER=ahwr_app' }
+if ($existingKeys -notcontains 'PGPASSWORD') { $additions += "PGPASSWORD=$(New-Secret)" }
+if ($existingKeys -notcontains 'TELEGRAF_DB_PASSWORD') { $additions += "TELEGRAF_DB_PASSWORD=$(New-Secret)" }
+if ($existingKeys -notcontains 'PG_SUPERUSER_PASSWORD') { $additions += "PG_SUPERUSER_PASSWORD=$(New-Secret)" }
+if ($additions.Count) {
+    Add-Content -LiteralPath $SettingsFile -Value (@('', '# TimescaleDB historian (added by Start-AHWR-EDGE.ps1)') + $additions) -Encoding UTF8
+    Write-Host "Added $($additions.Count) TimescaleDB setting(s) to settings.env." -ForegroundColor Yellow
+}
+
 Get-Content -LiteralPath $SettingsFile | ForEach-Object {
     $line = $_.TrimStart([char]0xFEFF)
     if ($line -match '^\s*([^#=]+)=(.*)$') {
         $key = $matches[1].Trim()
-        if ($key -ne 'PATH') {
-            [Environment]::SetEnvironmentVariable($key, $matches[2], 'Process')
-        }
+        if ($key -ne 'PATH') { [Environment]::SetEnvironmentVariable($key, $matches[2], 'Process') }
     }
 }
+if ($env:DEVICE_ID -notmatch $RigIdPattern) { throw "DEVICE_ID '$($env:DEVICE_ID)' in settings.env is not valid (1-64 letters, digits, . _ -)." }
 
-# Keep transferred/offline installs portable. The package may be extracted under
-# a different parent folder, so runtime paths must follow this script location.
+# Keep transferred/offline installs portable: runtime paths follow this folder.
 $env:DATA_DIR = Join-Path $DataDir 'app'
 $env:FRONTEND_DIST_DIR = Join-Path $Root 'app\frontend\dist'
-$env:TELEGRAF_CONFIG_PATH = Join-Path $Root 'app\telegraf\telegraf.conf'
+$env:TELEGRAF_CONFIG_PATH = Join-Path $Root 'app\telegraf\telegraf.d\plc.conf'
 $env:BOP_CONFIG_PATH = Join-Path $DataDir 'app\bop_config.json'
-$env:INFLUX_URL = 'http://127.0.0.1:8086'
+$env:TELEGRAF_LISTENER_URL = 'http://127.0.0.1:8186'
+if (-not $env:PGHOST) { $env:PGHOST = '127.0.0.1' }
+if (-not $env:PGPORT) { $env:PGPORT = '5432' }
+if (-not $env:PGDATABASE) { $env:PGDATABASE = 'ahwr_edge' }
+if (-not $env:PGUSER) { $env:PGUSER = 'ahwr_app' }
+$AppPassword = $env:PGPASSWORD
 
 function Test-Port([int]$Port) {
     try {
@@ -160,79 +196,92 @@ function Assert-PortAvailableOrManaged([int]$Port, [string]$Name) {
     }
     throw "Port $Port is already in use by an unmanaged process. Stop that service and start AHWR-EDGE again."
 }
+
+# An older AHWR install elsewhere on this PC (services AHWR-Dashboard,
+# AHWR-InfluxDB, AHWR-Telegraf) can hold the ports this edition needs; stop it
+# before anything starts (asks once for Administrator approval).
 Stop-LegacyAhwrServicesIfNeeded
-Assert-PortAvailableOrManaged 8086 'influxdb'
-Assert-PortAvailableOrManaged 8888 'telegraf'
-Assert-PortAvailableOrManaged 8080 'backend'
-Start-ManagedProcess 'influxdb' $Influxd "run --bolt-path `"$DataDir\influx\influxd.bolt`" --engine-path `"$DataDir\influx\engine`" --sqlite-path `"$DataDir\influx\influxd.sqlite`"" $Root
 
-$ready = $false
-for ($i = 0; $i -lt 60; $i++) {
-    if (Test-Port 8086) { $ready = $true; break }
-    Start-Sleep -Seconds 1
+function Find-Psql {
+    $bundled = Join-Path $PgBin 'psql.exe'
+    if (Test-Path -LiteralPath $bundled) { return $bundled }
+    $installed = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\psql.exe' -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+    if ($installed) { return $installed.FullName }
+    return $null
 }
-if (-not $ready) { throw 'InfluxDB did not start. Review logs\influxdb.err.log.' }
 
-try {
-    $setupState = Invoke-RestMethod -Uri 'http://127.0.0.1:8086/api/v2/setup' -TimeoutSec 5
-    if ($setupState.allowed) {
-        $setupBody = @{
-            username = 'ahwr_edge_admin'
-            password = [guid]::NewGuid().ToString('N') + 'Aa9!'
-            org = $env:INFLUX_ORG
-            bucket = $env:INFLUX_BUCKET
-            token = $env:INFLUX_TOKEN
-        } | ConvertTo-Json
-        Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:8086/api/v2/setup' -ContentType 'application/json' -Body $setupBody -TimeoutSec 30 | Out-Null
-        Write-Host 'Initialized the local InfluxDB database.'
-    }
-} catch { throw "InfluxDB first-run setup failed: $($_.Exception.Message)" }
-
-$backupDir = Join-Path $Root 'migration\influx_backup'
-$restoreMarker = Join-Path $Root 'migration\influx_restored.txt'
-$backupManifest = if (Test-Path -LiteralPath $backupDir) { Get-ChildItem -LiteralPath $backupDir -Filter '*.manifest' -File | Select-Object -First 1 } else { $null }
-if ($backupManifest -and -not (Test-Path -LiteralPath $restoreMarker)) {
-    Write-Host 'Restoring the source PC historian and InfluxDB metadata. This may take a few minutes...' -ForegroundColor Cyan
-    # A full restore cannot run with org/bucket filters. Remove only these
-    # inherited CLI filters for the restore, then restore them for app startup.
-    $restoreInfluxOrg = $env:INFLUX_ORG
-    $restoreInfluxBucket = $env:INFLUX_BUCKET
-    Remove-Item Env:INFLUX_ORG -ErrorAction SilentlyContinue
-    Remove-Item Env:INFLUX_BUCKET -ErrorAction SilentlyContinue
+# Apply app\sql (idempotent) as the postgres superuser.
+function Invoke-Schema([string]$Psql) {
+    $env:PGPASSWORD = $env:PG_SUPERUSER_PASSWORD
     try {
-        & $InfluxCli restore --full --operator-token $env:INFLUX_TOKEN --host 'http://127.0.0.1:8086' $backupDir
-        $restoreExitCode = $LASTEXITCODE
+        & $Psql -X -q -h $env:PGHOST -p $env:PGPORT -U postgres -d postgres -v ON_ERROR_STOP=1 `
+            -v "tg_pw=$($env:TELEGRAF_DB_PASSWORD)" -v "app_pw=$AppPassword" -f (Join-Path $SqlDir '01-roles.sql') | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'app\sql\01-roles.sql failed; see the messages above.' }
+        & $Psql -X -q -h $env:PGHOST -p $env:PGPORT -U postgres -d $env:PGDATABASE -v ON_ERROR_STOP=1 -f (Join-Path $SqlDir '02-schema.sql') | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'app\sql\02-schema.sql failed; see the messages above.' }
     } finally {
-        if ($null -ne $restoreInfluxOrg) { $env:INFLUX_ORG = $restoreInfluxOrg }
-        if ($null -ne $restoreInfluxBucket) { $env:INFLUX_BUCKET = $restoreInfluxBucket }
+        $env:PGPASSWORD = $AppPassword
     }
-    if ($restoreExitCode -ne 0) { throw 'InfluxDB historian restore failed. Review the message above; no PLC collectors have been started.' }
-    Set-Content -LiteralPath $restoreMarker -Value (Get-Date -Format o) -Encoding ASCII
-    Write-Host 'Historian and database metadata restored.' -ForegroundColor Green
+    Write-Host 'TimescaleDB roles and schema are up to date.'
 }
 
-$retentionSeconds = 180 * 24 * 60 * 60
-try {
-    $bucketInfo = Invoke-RestMethod -Uri "$env:INFLUX_URL/api/v2/buckets?name=$([uri]::EscapeDataString($env:INFLUX_BUCKET))" -Headers @{ Authorization = "Token $env:INFLUX_TOKEN" } -TimeoutSec 10
-    $bucket = $bucketInfo.buckets | Select-Object -First 1
-    if ($bucket -and $bucket.id) {
-        $retentionBody = @{
-            retentionRules = @(@{
-                type = 'expire'
-                everySeconds = $retentionSeconds
-            })
-        } | ConvertTo-Json -Depth 5
-        Invoke-RestMethod -Method Patch -Uri "$env:INFLUX_URL/api/v2/buckets/$($bucket.id)" -Headers @{ Authorization = "Token $env:INFLUX_TOKEN" } -ContentType 'application/json' -Body $retentionBody -TimeoutSec 10 | Out-Null
-        Write-Host "InfluxDB bucket '$env:INFLUX_BUCKET' retention set to 180 days."
+# --- PostgreSQL + TimescaleDB -------------------------------------------------
+$pgPort = [int]$env:PGPORT
+if ($env:PG_MODE -eq 'bundled') {
+    $PgCtl = Join-Path $PgBin 'pg_ctl.exe'
+    $InitDb = Join-Path $PgBin 'initdb.exe'
+    if (-not (Test-Path -LiteralPath $PgCtl)) { throw "PG_MODE=bundled but $PgCtl is missing. Copy the PostgreSQL + TimescaleDB runtime to runtime\pgsql, or set PG_MODE=service." }
+    if (-not (Test-Path -LiteralPath (Join-Path $PgData 'PG_VERSION'))) {
+        Write-Host 'Initialising the local PostgreSQL + TimescaleDB cluster...' -ForegroundColor Cyan
+        $pwFile = Join-Path $RunDir 'pg-init.tmp'
+        Set-Content -LiteralPath $pwFile -Value $env:PG_SUPERUSER_PASSWORD -Encoding ASCII -NoNewline
+        try {
+            & $InitDb -D $PgData -U postgres -E UTF8 --locale=C --auth=scram-sha-256 "--pwfile=$pwFile" | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'initdb failed.' }
+        } finally { Remove-Item -LiteralPath $pwFile -Force -ErrorAction SilentlyContinue }
+        Add-Content -LiteralPath (Join-Path $PgData 'postgresql.conf') -Encoding ASCII -Value @(
+            '',
+            '# AHWR-150 EDGE (TimescaleDB historian)',
+            "listen_addresses = '127.0.0.1'",
+            "port = $pgPort",
+            "shared_preload_libraries = 'timescaledb'",
+            'timescaledb.telemetry_level = off',
+            'timescaledb.max_background_workers = 8',
+            'max_worker_processes = 16',
+            'shared_buffers = 1GB',
+            'effective_cache_size = 4GB',
+            'maintenance_work_mem = 512MB',
+            'max_wal_size = 4GB',
+            'checkpoint_timeout = 15min',
+            'wal_compression = on'
+        )
     }
-} catch {
-    Write-Host "Warning: could not update InfluxDB retention to 180 days: $($_.Exception.Message)" -ForegroundColor Yellow
+    & $PgCtl status -D $PgData | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Assert-PortAvailableOrManaged $pgPort 'postgresql'
+        & $PgCtl start -D $PgData -l (Join-Path $LogDir 'postgresql.log') -w -t 120 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL did not start. Review logs\postgresql.log.' }
+        Write-Host 'Started PostgreSQL + TimescaleDB.'
+    } else {
+        Write-Host 'PostgreSQL is already running.'
+    }
+    Invoke-Schema (Join-Path $PgBin 'psql.exe')
+} else {
+    $ready = $false
+    for ($i = 0; $i -lt 60; $i++) { if (Test-Port $pgPort) { $ready = $true; break }; Start-Sleep -Seconds 1 }
+    if (-not $ready) { throw "PostgreSQL is not reachable on 127.0.0.1:$pgPort. Start the PostgreSQL service (see the Edge Installation Guide) or set PG_MODE=bundled." }
+    $psql = Find-Psql
+    if ($psql -and $env:PG_SUPERUSER_PASSWORD) {
+        Invoke-Schema $psql
+    } else {
+        Write-Host 'Service mode: apply app\sql\01-roles.sql and 02-schema.sql as postgres if not done yet (see docs\timescaledb.md).' -ForegroundColor Yellow
+    }
 }
 
-$env:INFLUX_URL = 'http://127.0.0.1:8086'
-$env:INFLUX_TOKEN = [Environment]::GetEnvironmentVariable('INFLUX_TOKEN', 'Process')
-$env:INFLUX_ORG = [Environment]::GetEnvironmentVariable('INFLUX_ORG', 'Process')
-$env:INFLUX_BUCKET = [Environment]::GetEnvironmentVariable('INFLUX_BUCKET', 'Process')
+# --- Telegraf, backend, BOP collector ------------------------------------------
+Assert-PortAvailableOrManaged 8888 'telegraf'
+Assert-PortAvailableOrManaged 8186 'telegraf'
+Assert-PortAvailableOrManaged 8080 'backend'
 Start-ManagedProcess 'telegraf' $Telegraf "--config `"$Root\app\telegraf\telegraf.conf`" --config-directory `"$Root\app\telegraf\telegraf.d`" --watch-config=poll" (Join-Path $Root 'app\telegraf')
 Start-ManagedProcess 'backend' $Node "`"$Backend`"" (Join-Path $Root 'app\backend')
 
@@ -254,7 +303,7 @@ Start-ManagedProcess 'bop-collector' $Python "`"$Collector`"" (Join-Path $Root '
 
 $lanIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike '127.*' -and $_.AddressState -eq 'Preferred' } | Select-Object -First 1 -ExpandProperty IPAddress)
 Write-Host ''
-Write-Host 'AHWR-EDGE is running.' -ForegroundColor Green
+Write-Host "AHWR-EDGE is running (rig $($env:DEVICE_ID), historian: TimescaleDB, $($env:PG_MODE) mode)." -ForegroundColor Green
 Write-Host 'This PC: http://localhost:8080'
 if ($lanIp) { Write-Host "Other PCs on this LAN: http://${lanIp}:8080" }
 Write-Host 'Allow Windows Firewall access on the Private network if prompted.'

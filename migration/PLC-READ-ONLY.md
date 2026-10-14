@@ -7,9 +7,10 @@ The matching upstream plugin collects data using AGReadMulti; its configuration
 exposes no PLC-write operation and no read_only switch.
 
 Startup loads app/telegraf/telegraf.conf and the .conf files in
-app/telegraf/telegraf.d. The inspected plugins are S7 and internal inputs,
-the converter processor, the InfluxDB historian output and localhost health
-output. Command-named tags such as CMD_Start are read, not executed.
+app/telegraf/telegraf.d. The plugins are the S7 and internal inputs, a loopback
+InfluxDB-protocol listener for the BOP collector, the Starlark telemetry-mapping
+processor, the TimescaleDB (PostgreSQL) historian output and localhost health
+output. (Updated for the TimescaleDB edition.) Command-named tags such as CMD_Start are read, not executed.
 The backend S7 configuration API edits local read mappings; it does not
 connect to the PLC to write values.
 
